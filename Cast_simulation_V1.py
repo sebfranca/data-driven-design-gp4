@@ -9,6 +9,7 @@ import numpy as np
 import sys
 import os
 from helper_functions import *
+
 # Import the necessary libraries:
 pyauxetic_library_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib/abaqus_plugins/pyauxetic-main'
 command_path = 'C:/SIMULIA/Abaqus/Commands'
@@ -17,34 +18,19 @@ sys.path.append(pyauxetic_library_path)
 sys.path.append(command_path)
 sys.path.append(abaqus_path)
 
-from abaqus import *
-import part
-# from part import EdgeArrayType
-# LOG(dir(part.EdgeArrayType))
-
-try:
-    from pyauxetic.classes.auxetic_unit_cell_params import *
-except ImportError as e:
-    LOG(e)
-try:
-    from pyauxetic.classes.auxetic_structure_params import *
-except ImportError as e:
-    LOG(e)
-try:
-    from pyauxetic.main import main_single
-except ImportError as e:
-    LOG(e)
+from pyauxetic.classes.auxetic_unit_cell_params import *
+from pyauxetic.classes.auxetic_structure_params import *
+from pyauxetic.main import main_single
 
 structure_type = 'reentrant2d_planar_shell'
 structure_name = 'reentrant_planar_test_1'
 folder_name = structure_name
 
-setPath = os.path.join('C:/Users/cedri/OneDrive/Documents/Mécanique - EPFL/Master IV/Data-driven-design-and-fabrication-methods/Abaqus_results/', 
+setPath = os.path.join(r'C://Users//cedri//OneDrive//Documents//Mécanique\ -\ EPFL//Master\ IV//Data-driven-design-and-fabrication-methods//Abaqus_results//', 
                        structure_name)
 
 if not os.path.exists(setPath):
-    os.makedirs(os.path.join('C:/Users/cedri/OneDrive/Documents/Mécanique - EPFL/Master IV/Data-driven-design-and-fabrication-methods/Abaqus_results/', 
-                       structure_name))
+    os.makedirs(setPath)
     
 os.chdir(setPath)
 
@@ -163,4 +149,4 @@ auxeticObj = main_single(structure_type  , structure_name,
                          job_params      , output_params ,
                          step_params     , run_analysis)
 
-subprocess.call("C:\SIMULIA\Abaqus\Commands\abq6141.bat python cae noGUI=Cast_simulation_V1.py")
+# subprocess.call("C:\SIMULIA\Abaqus\Commands\abq6141.bat python cae noGUI=Cast_simulation_V1.py")
