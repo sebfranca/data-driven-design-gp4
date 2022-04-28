@@ -5,6 +5,10 @@ Created on Wed Apr 27 09:41:44 2022
 @author: cedri
 """
 
+import sys
+
+sys.path.append('Librairies')
+
 from PyAuxeticWrapper import *
 
 aux_anal = AuxeticAnalysis()
@@ -16,7 +20,7 @@ aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': 2,
                                         'extrusion_depth': 5,
                                         'vert_bounding_box': 24,
                                         'horz_bounding_box': 20},
-                      num_cell_repeat= (8,3),
+                      cast_dimensions=(200,300),
                       load_direction='x',
                       load_value=20,
                       material={'E': 70e9,
