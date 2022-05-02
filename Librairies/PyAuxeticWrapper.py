@@ -45,6 +45,7 @@ class AuxeticAnalysis:
                      job_description='Sample job',
                      num_cpus=4,
                      max_memory_percent=80,
+                     seed_size=1,
                      elem_shape='QUAD',
                      elem_code='CPE4H',
                      save_cae=False,
@@ -70,6 +71,7 @@ class AuxeticAnalysis:
         self.job_description             = job_description
         self.num_cpus                    = num_cpus
         self.max_memory_percent          = max_memory_percent
+        self.seed_size                   = seed_size
         self.elem_shape                  = elem_shape
         self.elem_code                   = elem_code
         self.save_cae                    = save_cae
@@ -135,7 +137,7 @@ class AuxeticAnalysis:
         )
         
         mesh_params = MeshParams(
-            seed_size    = 1.0       ,
+            seed_size    = self.seed_size       ,
             elem_shape   = self.elem_shape    ,
             elem_code    = (self.elem_code) ,
             elem_library = 'STANDARD'
