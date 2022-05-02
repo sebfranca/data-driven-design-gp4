@@ -11,7 +11,8 @@ import os
 from helper_functions import *
 
 # Import the necessary libraries:
-pyauxetic_library_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib/abaqus_plugins/pyauxetic-main'
+# pyauxetic_library_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib/abaqus_plugins/pyauxetic-main'
+pyauxetic_library_path = '../pyauxetic-main'
 command_path = 'C:/SIMULIA/Abaqus/Commands'
 abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/cod/python2.7/lib'
 sys.path.append(pyauxetic_library_path)
