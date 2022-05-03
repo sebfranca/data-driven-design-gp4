@@ -30,12 +30,12 @@ class AuxeticAnalysis:
     
     def defineParams(self, 
                      unit_cell_params,
-                     cast_dimensions,
-                     load_direction,
+                     textile_dimensions,
                      load_value,
                      material,
-                     export_ribbon_width,
-                     result_folder_name,
+                     load_direction='x',
+                     export_ribbon_width=5,
+                     result_folder_name='analysis',
                      load_type='disp',
                      uniform=True,
                      time_period=1.0  ,
@@ -55,7 +55,7 @@ class AuxeticAnalysis:
                      ):
         
         self.unit_cell_params_list       = unit_cell_params
-        self.cast_dimensions             = cast_dimensions
+        self.textile_dimensions          = textile_dimensions
         self.load_type                   = load_type
         self.load_direction              = load_direction
         self.load_value                  = load_value
@@ -89,8 +89,8 @@ class AuxeticAnalysis:
             self.diag_strut_angle           = self.unit_cell_params_list['diag_strut_angle']
             # self.aspect_ratio               = self.unit_cell_params_list['aspect_ratio']
             self.extrusion_depth            = self.unit_cell_params_list['extrusion_depth']
-            self.nb_cells_x          = self.unit_cell_params_list['nb_cells_x']
-            self.nb_cells_y          = self.unit_cell_params_list['nb_cells_y']
+            self.nb_cells_x                 = self.unit_cell_params_list['nb_cells_x']
+            self.nb_cells_y                 = self.unit_cell_params_list['nb_cells_y']
             
             self.horz_bounding_box, self.vert_bounding_box = self.estimateCellsSize()
         
@@ -162,7 +162,7 @@ class AuxeticAnalysis:
         
         run_analysis = True
         structure_type = 'reentrant2d_planar_shell'
-        structure_name = 'reentrant_planar'
+        structure_name = self.result_folder_name
         
         auxeticObj = main_single(structure_type  , structure_name,
                                  self.unit_cell_params, pattern_params,
@@ -185,8 +185,6 @@ class AuxeticAnalysis:
                 file.write(str(self.output))
         except IOerror as e:
             LOG(e)
-            
-        LOG(os.getcwd())
         
     def setDirectory(self):
         
@@ -211,8 +209,8 @@ class AuxeticAnalysis:
         
         nb_x, nb_y = self.nb_cells_x, self.nb_cells_y
         
-        size_x = self.cast_dimensions[0] / nb_x
-        size_y = self.cast_dimensions[0] / nb_y
+        size_x = self.textile_dimensions[0] / nb_x
+        size_y = self.textile_dimensions[0] / nb_y
         
         return size_x, size_y
 
