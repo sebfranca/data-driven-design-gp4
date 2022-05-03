@@ -1,4 +1,4 @@
-import os
+import os, sys
 import logging
 from abc import ABCMeta, abstractmethod
 from collections import Iterable
@@ -8,11 +8,17 @@ from abaqusConstants import *  # noqa: F403
 from mesh import ElemType
 from odbAccess import openOdb
 from regionToolset import Region
-from helper_functions import *
 
 from .  import auxetic_structure_params  # noqa: E272
 from .. import helper
 from .. import postprocessing
+import interaction
+import step
+
+path = os.path.join(os.getcwd(),'/../../Librairies')
+sys.path.append(path)
+
+from helper_functions import *
 
 logger = logging.getLogger(__name__)
 
@@ -308,24 +314,24 @@ class AuxeticStructure:
         if self.loading_direction == 0:
             ld_coords = (point_x1_coords, point_x2_coords)
             td_coords = (point_y1_coords, point_y2_coords)
-            ld_edge_values = (coords[0][0], coords[1][0])
-            td_edge_values = (coords[0][1], coords[1][1])
+            ld_edge_values = (coords[0][0], coords[1][0]) #min_x, max_x
+            td_edge_values = (coords[0][1], coords[1][1]) #min_y, max_y
         else:
             ld_coords = (point_y1_coords, point_y2_coords)
             td_coords = (point_x1_coords, point_x2_coords)  # noqa: F841
-            ld_edge_values = (coords[0][1], coords[1][1])
-            td_edge_values = (coords[0][0], coords[1][0])
+            ld_edge_values = (coords[0][1], coords[1][1]) #min_y, max_y
+            td_edge_values = (coords[0][0], coords[1][0]) #min_x,max_x
         
         # Create sets for the edges.
         logger.debug('Creating sets for the edges.')
         self.sets['LD-Edge-1'] = part.Set(name='LD-Edge-1',
                                           edges=helper.find_edges_from_coords(
                                                 part=part, coord=self.loading_direction,
-                                                value=ld_edge_values[0]) )
+                                                value=ld_edge_values[0]) ) #part, loading direction, min x or y
         self.sets['LD-Edge-2'] = part.Set(name='LD-Edge-2',
                                           edges=helper.find_edges_from_coords(
                                                 part=part, coord=self.loading_direction,
-                                                value=ld_edge_values[1]) )
+                                                value=ld_edge_values[1]) ) #part, loading direction, max x or y
         self.sets['TD-Edge-1'] = part.Set(name='TD-Edge-1',
                                           edges=helper.find_edges_from_coords(
                                                 part=part, coord=self.transverse_direction,
@@ -478,7 +484,12 @@ class AuxeticStructure:
         self.model.StaticStep(name='Step-1', previous='Initial',
                               timePeriod=time_period, nlgeom=ON, maxNumInc=max_num_inc,
                               initialInc=init_inc_size, minInc=min_inc_size, maxInc=max_inc_size)
-        logger.info('Defined a static general step for the analysis.')
+        self.model.fieldOutputRequests['F-Output-1'].setValues(variables=(
+            'CDISP', 'CF', 'CSTRESS', 'LE', 'PE', 'PEEQ', 'PEMAG', 'RF', 'S','U', 'EVOL'))
+        # self.model.fieldOutputRequests(name='VolumeField',
+        #                                 createStepName='Step-1',
+        #                                 Variables=('EVOL'))
+        # logger.info('Defined a static general step for the analysis.')
     #
     
     def define_bcs(self, loading_params):
@@ -751,17 +762,13 @@ class AuxeticStructure:
         self.job.submit()
         logger.info("Job '%s' submitted. Waiting for completion..."%self.job.name)
         self.job.waitForCompletion()
-        
         if self.job.status == COMPLETED:
             logger.info('The job completed successfuly.')
             self.odb_path = os.path.join(os.getcwd(), self.job.name + '.odb')
         else:
             # raise RuntimeError('The job was aborted or terminated.' +
-            #                     ' Check message file for more information.')
-            LOG('The job was aborted or terminated.' +
-                                ' Check message file for more information.')
+            #                    ' Check message file for more information.')
             self.odb_path = os.path.join(os.getcwd(), self.job.name + '.odb')
-            
     #
     
     def output_results(self, output_params):
@@ -780,53 +787,55 @@ class AuxeticStructure:
         """
         
         logger.debug('Exporting results.')
+        debug_path = os.path.join(os.getcwd())
+        if not os.path.exists(debug_path):
+            LOG('results directory does not exist')
+            os.makedirs(debug_path)
         
-        # if self.job.status != COMPLETED:
-        #     raise RuntimeError('The job has not been completed.' +
-        #                        ' Output is only possible after completion of analysis.')
+        if self.job.status != COMPLETED:
+            # raise RuntimeError('The job has not been completed.' +
+            #                    ' Output is only possible after completion of analysis.')
+            pass
         
         # Make a directory for storing results.
         # This is also done in main.main().
         # TODO: check.
         folder_path = helper.return_results_folder_path(self.name, output_params.result_folder_name)
-        folder_path = os.getcwd()
         if os.path.isdir(folder_path):
             # raise RuntimeError("'%s' already exists. Delete it before proceeding."%folder_path)
-            LOG('Path already exist, content will be overwritten.')
+            pass
         else:
             os.makedirs(folder_path)
             logger.debug('Created the folder for analysis results: %s', folder_path)
         
+        LOG(self.odb_path)
         logger.debug('Opening the Odb.')
         odb = openOdb(path=self.odb_path)
+        
         output_table = postprocessing.get_numerical_output(obj=self, odb=odb)
         self.output_table = output_table
         postprocessing.write_single_numerical_output(output_table, self.name, folder_path)
         odb.close()
         
         if output_params.save_job_files: 
+            
             #TODO: add function that uses shutil.move and shutil.copy2 in case of exception.
-            LOG(folder_path)
             os.rename( os.path.join(os.getcwd(), self.job.name + '.inp'),
-                       os.path.join(folder_path, self.job.name + '.inp'))
-            
+                       os.path.join(debug_path, self.job.name + '.inp'))
             os.rename( os.path.join(os.getcwd(), self.job.name + '.msg'),
-                       os.path.join(folder_path, self.job.name + '.msg'))
-            
+                       os.path.join(debug_path, self.job.name + '.msg'))
             #os.rename( os.path.join(os.getcwd(), self.job.name + '.log'), #investigate access error.
             #           os.path.join(folder_path, self.job.name + '.log'))
-            
             sta_string = ''
             if os.path.isfile(os.path.join(os.getcwd(), self.job.name + '.sta')):
                 sta_string = ', and sta.'
                 os.rename( os.path.join(os.getcwd(), self.job.name + '.sta'),
-                           os.path.join(folder_path, self.job.name + '.sta'))
+                           os.path.join(debug_path, self.job.name + '.sta'))
         logger.debug('Saved job files to the folder: inp, msg, log%s.', sta_string)
-        
         
         if output_params.save_odb:
             new_odb_path = os.path.join(folder_path, self.job.name + '.odb')
-            os.rename(self.odb_path, new_odb_path)
+            os.rename(self.odb_path, self.odb_path)
             self.odb_path = new_odb_path
             logger.debug('Saved the Odb to the folder.')
         
@@ -851,8 +860,6 @@ class AuxeticStructure:
             # so only import it when running.
             from abaqus import mdb
             mdb.saveAs( os.path.join(folder_path, self.name) )
-            # p = mdb.models['Model-1'].parts['Honeycomb']
-            # p.getMassProperties()
             logger.debug('Saved the Mdb to the folder.')
         
         self.results_folder_path = folder_path

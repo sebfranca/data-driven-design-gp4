@@ -7,6 +7,10 @@ import numpy as np
 
 from abaqusConstants import *  # noqa: F403 # Consider removing
 from abaqus import *
+from helper_functions import *
+
+path = os.path.join(os.getcwd(),'/../..')
+sys.path.append(path)
 
 from . import __version__
 
@@ -84,7 +88,9 @@ def get_numerical_output(obj, odb):
         
         
         #lastFrame = odb.steps['Step-1'].frames[-1] if we only want last frame
+        # LOG(frame.fieldOutputs)
         volumeField = frame.fieldOutputs['EVOL'].values
+        
         volume_frame = 0
         for vol in volumeField:
             volume_frame += vol.data
@@ -142,7 +148,11 @@ def get_numerical_output(obj, odb):
 #
 
 def write_single_numerical_output(output_table, structure_name, folder_path):
-    with open(os.path.join(folder_path, structure_name+' results.csv') ,'w') as file:
+    debug_path = os.path.join(os.getcwd(),'..','Tables')
+    if not os.path.exists(debug_path):
+        LOG('results directory does not exist')
+        os.makedirs(debug_path)
+    with open(os.path.join(os.getcwd(),'..','Tables', structure_name+' results.csv') ,'w') as file:
         file.write('Modeling and post-processing done by PyAuxetic %s\n'%__version__)
         #TODO: add model info.
         file.write( ', '.join(_output_table_labels) + '\n' )

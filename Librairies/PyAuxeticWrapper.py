@@ -12,7 +12,7 @@ from helper_functions import *
 
 # Import the necessary libraries:
 # pyauxetic_library_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib/abaqus_plugins/pyauxetic-main'
-pyauxetic_library_path = '../pyauxetic-main'
+pyauxetic_library_path = os.path.join(os.getcwd(),'pyauxetic-main')
 command_path = 'C:/SIMULIA/Abaqus/Commands'
 abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/cod/python2.7/lib'
 sys.path.append(pyauxetic_library_path)
@@ -89,10 +89,10 @@ class AuxeticAnalysis:
             self.diag_strut_angle           = self.unit_cell_params_list['diag_strut_angle']
             # self.aspect_ratio               = self.unit_cell_params_list['aspect_ratio']
             self.extrusion_depth            = self.unit_cell_params_list['extrusion_depth']
-            self.horz_bounding_box          = self.unit_cell_params_list['horz_bounding_box']
-            self.vert_bounding_box          = self.unit_cell_params_list['vert_bounding_box']
+            self.nb_cells_x          = self.unit_cell_params_list['nb_cells_x']
+            self.nb_cells_y          = self.unit_cell_params_list['nb_cells_y']
             
-            
+            self.horz_bounding_box, self.vert_bounding_box = self.estimateCellsSize()
         
             self.unit_cell_params = Reentrant2DUcpBox(
                 id                   = 1  ,
@@ -106,7 +106,7 @@ class AuxeticAnalysis:
             
             pattern_params = PatternParams(
               pattern_mode    = 'uniform',
-              num_cell_repeat = self.estimateNbCells(),
+              num_cell_repeat = (self.nb_cells_x,self.nb_cells_y),
               structure_map   = None
             )
             
@@ -144,8 +144,14 @@ class AuxeticAnalysis:
             elem_library = 'STANDARD'
         )
         
+        debug_path = os.path.join(os.getcwd())
+        if not os.path.exists(debug_path):
+            LOG('results directory does not exist')
+            os.makedirs(debug_path)
+        final_results_folder = os.path.join(os.getcwd(),'..','Debug',self.result_folder_name)
+        
         output_params = OutputParams(
-            result_folder_name     = self.result_folder_name,
+            result_folder_name     = final_results_folder,
             save_cae               = self.save_cae,
             save_odb               = True,
             save_job_files         = True,
@@ -170,7 +176,7 @@ class AuxeticAnalysis:
         output_table_labels = ['Inc', 'Time',
                                'U_ld', 'U_td_mean', 'U_td_midpoint',
                                'strain_ld', 'strain_td_mean', 'strain_td_midpoint',
-                               'poisson_midpoint', 'poisson_mean']
+                               'poisson_midpoint', 'poisson_mean','volume']
         
         self.output = {label: results[i] for i, label in enumerate(output_table_labels)}
         
@@ -184,11 +190,11 @@ class AuxeticAnalysis:
         
     def setDirectory(self):
         
-        setPath = os.path.join('../Abaqus_results', 
+        setPath = os.path.join(os.getcwd(),'Abaqus_results', 
                                self.result_folder_name)
         
         if not os.path.exists(setPath):
-            LOG('does not exist')
+            LOG('results directory does not exist')
             os.makedirs(setPath)
             
         os.chdir(setPath)
@@ -201,16 +207,13 @@ class AuxeticAnalysis:
         except IOError as e:
             LOG(e)
             
-    def estimateNbCells(self):
+    def estimateCellsSize(self):
         
-        x_dim, y_dim = self.cast_dimensions[0], self.cast_dimensions[1]
+        nb_x, nb_y = self.nb_cells_x, self.nb_cells_y
         
-        nb_x = np.floor(x_dim / self.horz_bounding_box)
-        nb_y = np.floor(y_dim / self.vert_bounding_box)
+        size_x = self.cast_dimensions[0] / nb_x
+        size_y = self.cast_dimensions[0] / nb_y
         
-        self.residual_x = x_dim - nb_x * self.horz_bounding_box
-        self.residual_y = y_dim - nb_y * self.vert_bounding_box
-        
-        return (nb_x,nb_y)
+        return size_x, size_y
 
 
