@@ -10,22 +10,18 @@ import sys
 sys.path.append('Librairies')
 
 from PyAuxeticWrapper import *
+import numpy as np
 
 aux_anal = AuxeticAnalysis()
 
-# vert_strut_thickness = 2
-# diag_strut_thickness = 2
-
-# unit_cell_params={'vert_strut_thickness': vert_strut_thickness,
-#                 'diag_strut_thickness': diag_strut_thickness,
-#                 'diag_strut_angle': diag_strut_angle,
-#                 'extrusion_depth': 2,
-#                 'nb_cells_x': nb_cells_x,
-#                 'nb_cells_y': nb_cells_y}
+vert_strut_thickness = 2
+diag_strut_thickness = 2
+seed_size = np.min(vert_strut_thickness,diag_strut_thickness)/2
+#pouet
 
 
-aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': 1.5,
-                                        'diag_strut_thickness': 1.5,
+aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': vert_strut_thickness,
+                                        'diag_strut_thickness': diag_strut_thickness,
                                         'diag_strut_angle': 60,
                                         'extrusion_depth': 2,
                                         'nb_cells_x': 2,
@@ -34,7 +30,7 @@ aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': 1.5,
                       load_direction='x',
                       load_type='force',
                       load_value=10,
-                      seed_size=.2,
+                      seed_size= seed_size,
                       time_period=1.0  ,
                       init_inc_size=0.1 ,
                       min_inc_size=0.05,
