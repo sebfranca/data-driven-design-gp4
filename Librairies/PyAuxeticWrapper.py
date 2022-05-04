@@ -30,7 +30,7 @@ class AuxeticAnalysis:
     
     def defineParams(self, 
                      unit_cell_params,
-                     cast_dimensions,
+                     textile_dimensions,
                      load_direction,
                      load_value,
                      material,
@@ -55,7 +55,7 @@ class AuxeticAnalysis:
                      ):
         
         self.unit_cell_params_list       = unit_cell_params
-        self.cast_dimensions             = cast_dimensions
+        self.textile_dimensions             = textile_dimensions
         self.load_type                   = load_type
         self.load_direction              = load_direction
         self.load_value                  = load_value
@@ -162,7 +162,7 @@ class AuxeticAnalysis:
         
         run_analysis = True
         structure_type = 'reentrant2d_planar_shell'
-        structure_name = 'reentrant_planar'
+        structure_name = self.result_folder_name
         
         auxeticObj = main_single(structure_type  , structure_name,
                                  self.unit_cell_params, pattern_params,
@@ -211,8 +211,8 @@ class AuxeticAnalysis:
         
         nb_x, nb_y = self.nb_cells_x, self.nb_cells_y
         
-        size_x = self.cast_dimensions[0] / nb_x
-        size_y = self.cast_dimensions[0] / nb_y
+        size_x = self.textile_dimensions[0] / nb_x
+        size_y = self.textile_dimensions[0] / nb_y
         
         return size_x, size_y
 
