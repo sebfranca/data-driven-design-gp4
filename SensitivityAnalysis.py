@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May  3 17:31:09 2022
-
-@author: sebas
+Run the sensitivity analysis.
+Results are saved in '/PythonResults/<var>_sensitivity.txt' for further 
+analysis with python only
 """
 import sys
 import numpy as np
 import csv
 import os
+import logging
 
 sys.path.append('Librairies')
 
 from PyAuxeticWrapper import *
+from helper_functions import *
+
 
 def main():
     mode = 'debug' #'running' or 'debug'
@@ -169,6 +172,7 @@ def runAnalysis(friendly_name, job_name, probed_var_name, params):
     
     #Write the results to a text file located in Python_results
     saveResults(friendly_name,probed_var_values,output_volume,output_poisson)
+    
     
     LOG('\n \n' + 'Results for ' + friendly_name + ' were saved! \n \n')
     
