@@ -1,7 +1,8 @@
 import sys
 
 def LOG(msg):
-    print >> sys.__stdout__, str(msg)
+    print(msg)
+    # print >> sys.__stdout__, str(msg)
     
 def parser_res(file='abaqus'):
     '''

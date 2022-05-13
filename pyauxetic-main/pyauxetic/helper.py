@@ -276,9 +276,9 @@ def return_results_folder_path(structure_name, root_folder_name=None):
     """
     #TODO: validate the string. size, start with letter.
     if root_folder_name is None:
-        return os.path.join(os.getcwd(), structure_name)
+        return os.path.join(os.getcwd())
     else:
-        return os.path.join(os.getcwd(), root_folder_name, structure_name)
+        return os.path.join(os.getcwd())
 #
 
 def return_sketch_name(base_name):

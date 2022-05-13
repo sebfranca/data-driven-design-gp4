@@ -8,6 +8,7 @@ Created on Wed Apr 27 08:37:18 2022
 import numpy as np
 import sys
 import os
+import pickle, io, json
 from helper_functions import *
 
 # Import the necessary libraries:
@@ -19,9 +20,7 @@ sys.path.append(pyauxetic_library_path)
 sys.path.append(command_path)
 sys.path.append(abaqus_path)
 
-from pyauxetic.classes.auxetic_unit_cell_params import *
-from pyauxetic.classes.auxetic_structure_params import *
-from pyauxetic.main import main_single
+
 
 class AuxeticAnalysis:
     
@@ -36,13 +35,13 @@ class AuxeticAnalysis:
                      load_direction='x',
                      export_ribbon_width=5,
                      result_folder_name='analysis',
-                     load_type='disp',
+                     load_type='force',
                      uniform=True,
-                     time_period=1.0  ,
-                     init_inc_size=0.1 ,
-                     min_inc_size=0.05,
-                     max_inc_size=0.1 ,
-                     max_num_inc=100,
+                     time_period=1.0,
+                     init_inc_size=0.1,
+                     min_inc_size=0.01,
+                     max_inc_size=0.1,
+                     max_num_inc=10000,
                      job_description='Sample job',
                      num_cpus=4,
                      max_memory_percent=80,
@@ -84,8 +83,8 @@ class AuxeticAnalysis:
         self.setDirectory() # Set working directory
         
         if self.uniform: 
-            self.vert_strut_thickness       = self.unit_cell_params_list['vert_strut_thickness']
-            self.diag_strut_thickness       = self.unit_cell_params_list['diag_strut_thickness']
+            # self.vert_strut_thickness       = self.unit_cell_params_list['vert_strut_thickness']
+            # self.diag_strut_thickness       = self.unit_cell_params_list['diag_strut_thickness']
             self.diag_strut_angle           = self.unit_cell_params_list['diag_strut_angle']
             # self.aspect_ratio               = self.unit_cell_params_list['aspect_ratio']
             self.extrusion_depth            = self.unit_cell_params_list['extrusion_depth']
@@ -93,6 +92,11 @@ class AuxeticAnalysis:
             self.nb_cells_y                 = self.unit_cell_params_list['nb_cells_y']
             
             self.horz_bounding_box, self.vert_bounding_box = self.estimateCellsSize()
+            
+            self.vert_strut_thickness = self.vert_bounding_box/6
+            self.diag_strut_thickness = self.vert_bounding_box/6
+            
+            print(self.vert_strut_thickness)
         
             self.unit_cell_params = Reentrant2DUcpBox(
                 id                   = 1  ,
@@ -103,6 +107,11 @@ class AuxeticAnalysis:
                 diag_strut_thickness = self.diag_strut_thickness,
                 diag_strut_angle     = self.diag_strut_angle
                 )
+            
+            # Check seed size as a fct of the smallest elements
+            self.seed_size = np.min([self.vert_strut_thickness,
+                                     self.diag_strut_thickness,
+                                     self.extrusion_depth])/2.5
             
             pattern_params = PatternParams(
               pattern_mode    = 'uniform',
@@ -144,14 +153,9 @@ class AuxeticAnalysis:
             elem_library = 'STANDARD'
         )
         
-        debug_path = os.path.join(os.getcwd())
-        if not os.path.exists(debug_path):
-            LOG('results directory does not exist')
-            os.makedirs(debug_path)
-        final_results_folder = os.path.join(os.getcwd(),'..','Debug',self.result_folder_name)
         
         output_params = OutputParams(
-            result_folder_name     = final_results_folder,
+            result_folder_name     = self.result_folder_name,
             save_cae               = self.save_cae,
             save_odb               = True,
             save_job_files         = True,
@@ -178,13 +182,21 @@ class AuxeticAnalysis:
                                'strain_ld', 'strain_td_mean', 'strain_td_midpoint',
                                'poisson_midpoint', 'poisson_mean','volume']
         
-        self.output = {label: results[i] for i, label in enumerate(output_table_labels)}
+        results_file = os.path.join(os.getcwd(),'../Tables/results.csv')
+        
+        if not os.path.exists(os.path.join(os.getcwd(),'../Tables')):
+            os.makedirs(os.path.join(os.getcwd(),'../Tables'))
+            
+        self.output = {}
+        self.output = {label: results[i,-1] for i, label in enumerate(output_table_labels)}
         
         try:
-            with open(os.path.join(os.getcwd(),'results.txt'),'w+') as file:
+            with open(results_file,'w+') as file:
                 file.write(str(self.output))
         except IOerror as e:
             LOG(e)
+            
+        self.resetDirectory()
         
     def setDirectory(self):
         
@@ -205,6 +217,13 @@ class AuxeticAnalysis:
         except IOError as e:
             LOG(e)
             
+    def resetDirectory(self):
+        
+        LOG('changing path')
+        setPath = os.path.join(os.getcwd(),'../../')
+            
+        os.chdir(setPath)
+            
     def estimateCellsSize(self):
         
         nb_x, nb_y = self.nb_cells_x, self.nb_cells_y
@@ -214,4 +233,46 @@ class AuxeticAnalysis:
         
         return size_x, size_y
 
-
+if __name__ == '__main__':
+    
+    pyauxetic_library_path = os.path.join(os.getcwd(),'../pyauxetic-main')
+    command_path = 'C:/SIMULIA/Abaqus/Commands'
+    abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/cod/python2.7/lib'
+    sys.path.append(pyauxetic_library_path)
+    sys.path.append(command_path)
+    sys.path.append(abaqus_path)
+    sys.stderr.write(pyauxetic_library_path)
+    
+    from pyauxetic.classes.auxetic_unit_cell_params import *
+    from pyauxetic.classes.auxetic_structure_params import *
+    from pyauxetic.main import main_single
+    
+    with io.open('Params.pkl','r') as file:
+        params = json.load(file)
+    
+    unit_cell_params={'diag_strut_angle': params['strut_angle'],
+                      'extrusion_depth': params['extrusion_depth'],
+                      'nb_cells_x': int(params['nb_cells_x']),
+                      'nb_cells_y': int(params['nb_cells_y'])}
+    
+    aux_anal = AuxeticAnalysis()
+    
+    aux_anal.defineParams(unit_cell_params,
+                          params['textile_dimensions'],
+                          params['load_value'],
+                          params['material'],
+                          result_folder_name=str(params['folder']))
+    
+    aux_anal.createAnalysis()
+    
+    objective = (aux_anal.output['poisson_mean'] + 
+                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling'])
+    
+    output = {'objective': objective,
+              'vert': aux_anal.vert_strut_thickness,
+              'diag': aux_anal.diag_strut_thickness,
+              'extrusion': aux_anal.extrusion_depth,
+              'seed': aux_anal.seed_size}
+    
+    with open('Output.pkl','w+') as file:
+        json.dump(output,file)

@@ -48,3 +48,5 @@ aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': 1.5,
                       result_folder_name='Test2')
 
 aux_anal.createAnalysis()       
+
+sys.stdout.write('Finished')
