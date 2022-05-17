@@ -23,19 +23,21 @@ bounds = {'nb_cells_x': {'lower': 5,
                          'upper': 10},
           'nb_cells_y': {'lower': 5,
                          'upper': 10},
-          'strut_angle': {'lower': 70,
-                          'upper': 80}}
+          'AR': {'lower': 1,
+                  'upper': 6}}
 
 params = {'bounds': bounds,
           'acquisition_type': 'EI',
           'acquisition_weight': .4,
-          'max_iter': 10,
+          'max_iter': 5,
           'max_time': None,
           'eps': 1e-8,
           'verbosity': True,
-          'tolerance': 1e-8}
+          'tolerance': 1e-8,
+          'kappa': 1.96,                # The higher, the more exploration
+          'xi':1e-2}                    # Controls how much improvement we want over the previous value
 
-material = {'E': 2e6,
+material = {'E': 2.5e6,
             'density':1,
             'nu': .33}
 

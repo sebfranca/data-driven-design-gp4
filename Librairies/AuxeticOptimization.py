@@ -9,7 +9,7 @@ from PyAuxeticWrapper import *
 import GPyOpt as GP
 from helper_functions import *
 import os, sys, pickle, subprocess, json
-import skopt
+import skopt, time
 
 class AuxeticOptimization(AuxeticAnalysis):
     def __init__(self):
@@ -42,7 +42,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.objective                                = []
         self.results                                  = {'nb_cells_x': [],
                                                          'nb_cells_y': [],
-                                                         'strut_angle': [],
+                                                         'AR': [],
                                                          'obj': [],
                                                          'vert_thickness': [],
                                                          'diag_thickness': [],
@@ -87,6 +87,8 @@ class AuxeticOptimization(AuxeticAnalysis):
             self.eps                     = params['eps']
             self.verbosity               = params['verbosity']
             self.tolerance               = params['tolerance']
+            self.kappa                   = params['kappa']
+            self.xi                      = params['xi']
             
     def setIODirectory(self):
         
@@ -101,11 +103,9 @@ class AuxeticOptimization(AuxeticAnalysis):
                           'nb_cells_x': query[0,1],
                           'nb_cells_y': query[0,2]}
         elif librairy == 'skopt':
-            self.space = {'strut_angle': int(kwargs['params']['strut_angle']),
+            self.space = {'AR': float(kwargs['params']['AR']),
                           'nb_cells_x': int(kwargs['params']['nb_cells_x']),
                           'nb_cells_y': int(kwargs['params']['nb_cells_y'])}
-            
-        print(self.space)
         
         with open('Params.pkl','w+') as file:
             json.dump({**self.space,**self.params},file)
@@ -114,8 +114,12 @@ class AuxeticOptimization(AuxeticAnalysis):
                          stdout=subprocess.PIPE,
                          shell=True,
                          stderr=subprocess.PIPE)
-        # print(p.stderr)
-        # print(p.stdout)
+        
+        # print('STDOUT : \n{}'.format(p.stdout))
+        # print('STDERR : \n{}'.format(p.stderr))
+        for (out,err) in zip(iter(p.stdout.decode()),iter(p.stderr.decode())):
+            print(out)
+            print(err)
         
         with open('Output.pkl','rb') as file:
             output = json.load(file)
@@ -131,9 +135,9 @@ class AuxeticOptimization(AuxeticAnalysis):
     def train_skopt(self):
         os.chdir(os.path.join(os.getcwd(),'Librairies'))
         
-        SPACE = [skopt.space.Real(self.bounds['strut_angle']['lower'], 
-                                  self.bounds['strut_angle']['upper'], 
-                                  name='strut_angle', 
+        SPACE = [skopt.space.Real(self.bounds['AR']['lower'], 
+                                  self.bounds['AR']['upper'], 
+                                  name='AR', 
                                   prior='uniform'),
                  skopt.space.Integer(self.bounds['nb_cells_x']['lower'], 
                                      self.bounds['nb_cells_x']['upper'], 
@@ -151,33 +155,43 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         def callback(res):
             n = len(res.x_iters)
-            print('Iteration {}, current point {}, current objective {}'.format(n,
-                                                                                self.space,
-                                                                                self.objective))
+            print('Iteration {}/{}, current point {}, current objective {}'.format(n,
+                                                                                   self.max_iter,
+                                                                                   self.space,
+                                                                                   self.objective))
             self.results['nb_cells_x'].append(self.space['nb_cells_x'])
             self.results['nb_cells_y'].append(self.space['nb_cells_y'])
-            self.results['strut_angle'].append(self.space['strut_angle'])
+            self.results['AR'].append(self.space['AR'])
             self.results['obj'].append(self.objective)
             self.results['vert_thickness'].append(self.vert_strut_thickness)
             self.results['diag_thickness'].append(self.diag_strut_thickness)
             self.results['extrusion_depth'].append(self.extrusion_depth)
             self.results['seed_size'].append(self.seed_size)
             
-            with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.pkl'),'w+') as file:
-                skopt.callbacks.CheckpointSaver(file)
+            # with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.pkl'),'w+') as file:
+            #     skopt.callbacks.CheckpointSaver(file)
             with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.json'),'w+') as file:
                 json.dump(self.results,file)
                 
+        intermediate_save = os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.pkl')
+        nb_iter_without_save = 5
+        nb_saves = int(self.max_iter / nb_iter_without_save)
         if self.load:
-            loaded_space = skopt.load(self.load)
-            res_gp = skopt.gp_minimize(objective, 
-                                       SPACE, 
-                                       n_calls=50,
-                                       acq_func="EI",
-                                       n_random_starts=5,
-                                       callback=[callback],
-                                       x0=loaded_space.x_iters,
-                                       yo=loaded_space.func_vals)
+            loaded_space = skopt.load(intermediate_save)
+            
+            for k in range(nb_saves):
+                res_gp = skopt.gp_minimize(objective, 
+                                           SPACE, 
+                                           n_calls=nb_iter_without_save,
+                                           acq_func="EI",
+                                           n_random_starts=5,
+                                           callback=[callback],
+                                           x0=loaded_space.x_iters,
+                                           y0=loaded_space.func_vals,
+                                           kappa=self.kappa,
+                                           xi=self.xi)
+                skopt.dump(res_gp,intermediate_save)
+                loaded_space = skopt.load(intermediate_save)
             
         else:
             res_gp = skopt.gp_minimize(objective, 
@@ -185,10 +199,24 @@ class AuxeticOptimization(AuxeticAnalysis):
                                        acq_func="EI",
                                        n_random_starts=5,
                                        callback=[callback],
-                                       n_calls=50)
-        
-        
-        
+                                       n_calls=nb_iter_without_save,
+                                       kappa=self.kappa,
+                                       xi=self.xi)
+            skopt.dump(res_gp,intermediate_save)
+            
+            for k in range(nb_saves-1):
+                loaded_space = skopt.load(intermediate_save)
+                res_gp = skopt.gp_minimize(objective, 
+                                           SPACE, 
+                                           n_calls=nb_iter_without_save,
+                                           acq_func="EI",
+                                           n_random_starts=5,
+                                           callback=[callback],
+                                           x0=loaded_space.x_iters,
+                                           y0=loaded_space.func_vals,
+                                           kappa=self.kappa,
+                                           xi=self.xi)
+                skopt.dump(res_gp,intermediate_save)
         
     def train_GPyOpt(self):
         

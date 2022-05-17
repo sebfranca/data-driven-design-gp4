@@ -41,7 +41,7 @@ class AuxeticAnalysis:
                      init_inc_size=0.1,
                      min_inc_size=0.01,
                      max_inc_size=0.1,
-                     max_num_inc=10000,
+                     max_num_inc=1000,
                      job_description='Sample job',
                      num_cpus=4,
                      max_memory_percent=80,
@@ -85,7 +85,7 @@ class AuxeticAnalysis:
         if self.uniform: 
             # self.vert_strut_thickness       = self.unit_cell_params_list['vert_strut_thickness']
             # self.diag_strut_thickness       = self.unit_cell_params_list['diag_strut_thickness']
-            self.diag_strut_angle           = self.unit_cell_params_list['diag_strut_angle']
+            self.AR                         = self.unit_cell_params_list['AR']
             # self.aspect_ratio               = self.unit_cell_params_list['aspect_ratio']
             self.extrusion_depth            = self.unit_cell_params_list['extrusion_depth']
             self.nb_cells_x                 = self.unit_cell_params_list['nb_cells_x']
@@ -93,10 +93,40 @@ class AuxeticAnalysis:
             
             self.horz_bounding_box, self.vert_bounding_box = self.estimateCellsSize()
             
-            self.vert_strut_thickness = self.vert_bounding_box/6
-            self.diag_strut_thickness = self.vert_bounding_box/6
+            self.vert_strut_thickness = self.horz_bounding_box / self.AR
+            self.diag_strut_thickness = self.vert_strut_thickness
             
-            print(self.vert_strut_thickness)
+            self.diag_strut_angle = 50
+            
+            test_not_passed = True
+            
+            while(test_not_passed):
+            
+                horz_bounding_box    = self.horz_bounding_box / 2.0
+                vert_bounding_box    = self.vert_bounding_box / 2.0
+                vert_strut_thickness = self.vert_strut_thickness
+                diag_strut_angle     = self.diag_strut_angle
+                diag_strut_thickness = self.diag_strut_thickness
+                tail_strut_thickness = self.vert_strut_thickness
+                
+                diag_strut_angle_rad      = np.deg2rad(diag_strut_angle)
+                tail_strut_thickness_half = tail_strut_thickness / 2.0
+                diag_strut_length = (horz_bounding_box - tail_strut_thickness_half) / sin(diag_strut_angle_rad)
+                vert_strut_length_half = ( vert_bounding_box
+                                      + (diag_strut_length         * cos(diag_strut_angle_rad) )
+                                      + (diag_strut_thickness      / sin(diag_strut_angle_rad) )
+                                      + (tail_strut_thickness_half / tan(diag_strut_angle_rad) ) ) / 2.0
+                vert_strut_length = vert_strut_length_half * 2.0
+                tail_strut_length = ( vert_strut_length_half
+                                      - (diag_strut_thickness      / sin(diag_strut_angle_rad) )
+                                      - (tail_strut_thickness_half / tan(diag_strut_angle_rad) ) )
+                
+                ## These dimensions only work if diag_line1 ends higher than tail_hline.
+                if tail_strut_length >= ( diag_strut_length * cos(diag_strut_angle_rad) ):
+                    test_not_passed = False
+                    pass
+                
+                self.diag_strut_angle = np.random.uniform(self.diag_strut_angle,90,1)[0]
         
             self.unit_cell_params = Reentrant2DUcpBox(
                 id                   = 1  ,
@@ -250,7 +280,7 @@ if __name__ == '__main__':
     with io.open('Params.pkl','r') as file:
         params = json.load(file)
     
-    unit_cell_params={'diag_strut_angle': params['strut_angle'],
+    unit_cell_params={'AR': params['AR'],
                       'extrusion_depth': params['extrusion_depth'],
                       'nb_cells_x': int(params['nb_cells_x']),
                       'nb_cells_y': int(params['nb_cells_y'])}
