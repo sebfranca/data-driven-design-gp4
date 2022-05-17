@@ -1,4 +1,4 @@
-import os, sys
+import os
 import logging
 from abc import ABCMeta, abstractmethod
 from collections import Iterable
@@ -14,11 +14,6 @@ from .. import helper
 from .. import postprocessing
 import interaction
 import step
-
-path = os.path.join(os.getcwd(),'/../../Librairies')
-sys.path.append(path)
-
-from helper_functions import *
 
 logger = logging.getLogger(__name__)
 
@@ -485,11 +480,12 @@ class AuxeticStructure:
                               timePeriod=time_period, nlgeom=ON, maxNumInc=max_num_inc,
                               initialInc=init_inc_size, minInc=min_inc_size, maxInc=max_inc_size)
         self.model.fieldOutputRequests['F-Output-1'].setValues(variables=(
-            'CDISP', 'CF', 'CSTRESS', 'LE', 'PE', 'PEEQ', 'PEMAG', 'RF', 'S','U', 'EVOL'))
+            'CDISP', 'CF', 'CSTRESS', 'LE', 'PE', 'PEEQ', 'PEMAG', 'RF', 'S', 'U', 
+            'EVOL'))
         # self.model.fieldOutputRequests(name='VolumeField',
-        #                                 createStepName='Step-1',
-        #                                 Variables=('EVOL'))
-        # logger.info('Defined a static general step for the analysis.')
+        #                                createStepName='Step-1',
+        #                                Variables=('EVOL'))
+        logger.info('Defined a static general step for the analysis.')
     #
     
     def define_bcs(self, loading_params):
@@ -768,7 +764,7 @@ class AuxeticStructure:
         else:
             # raise RuntimeError('The job was aborted or terminated.' +
             #                    ' Check message file for more information.')
-            self.odb_path = os.path.join(os.getcwd(), self.job.name + '.odb')
+            pass
     #
     
     def output_results(self, output_params):
@@ -787,10 +783,6 @@ class AuxeticStructure:
         """
         
         logger.debug('Exporting results.')
-        debug_path = os.path.join(os.getcwd())
-        if not os.path.exists(debug_path):
-            LOG('results directory does not exist')
-            os.makedirs(debug_path)
         
         if self.job.status != COMPLETED:
             # raise RuntimeError('The job has not been completed.' +
@@ -810,31 +802,29 @@ class AuxeticStructure:
         
         logger.debug('Opening the Odb.')
         odb = openOdb(path=self.odb_path)
-        
         output_table = postprocessing.get_numerical_output(obj=self, odb=odb)
         self.output_table = output_table
         postprocessing.write_single_numerical_output(output_table, self.name, folder_path)
         odb.close()
         
         if output_params.save_job_files: 
-            
             #TODO: add function that uses shutil.move and shutil.copy2 in case of exception.
             os.rename( os.path.join(os.getcwd(), self.job.name + '.inp'),
-                       os.path.join(debug_path, self.job.name + '.inp'))
+                       os.path.join(folder_path, self.job.name + '.inp'))
             os.rename( os.path.join(os.getcwd(), self.job.name + '.msg'),
-                       os.path.join(debug_path, self.job.name + '.msg'))
+                       os.path.join(folder_path, self.job.name + '.msg'))
             #os.rename( os.path.join(os.getcwd(), self.job.name + '.log'), #investigate access error.
             #           os.path.join(folder_path, self.job.name + '.log'))
             sta_string = ''
             if os.path.isfile(os.path.join(os.getcwd(), self.job.name + '.sta')):
                 sta_string = ', and sta.'
                 os.rename( os.path.join(os.getcwd(), self.job.name + '.sta'),
-                           os.path.join(debug_path, self.job.name + '.sta'))
+                           os.path.join(folder_path, self.job.name + '.sta'))
         logger.debug('Saved job files to the folder: inp, msg, log%s.', sta_string)
         
         if output_params.save_odb:
             new_odb_path = os.path.join(folder_path, self.job.name + '.odb')
-            os.rename(self.odb_path, self.odb_path)
+            os.rename(self.odb_path, new_odb_path)
             self.odb_path = new_odb_path
             logger.debug('Saved the Odb to the folder.')
         

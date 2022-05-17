@@ -26,7 +26,7 @@ aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': vert_strut_thick
                                         'extrusion_depth': 2,
                                         'nb_cells_x': 2,
                                         'nb_cells_y': 2},
-                      cast_dimensions=(20,20),
+                      textile_dimensions=(20,20),
                       load_direction='x',
                       load_type='force',
                       load_value=10,
@@ -44,3 +44,5 @@ aux_anal.defineParams(unit_cell_params={'vert_strut_thickness': vert_strut_thick
                       result_folder_name='Test2')
 
 aux_anal.createAnalysis()       
+
+sys.stdout.write('Finished')
