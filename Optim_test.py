@@ -43,6 +43,7 @@ aux_opt.optimParams(params=params,
                     objective_scaling=1,
                     textile_dimensions=(50,50),
                     load_value=10,
-                    material=material)
+                    material=material,
+                    optimizer='skopt')
 
-aux_opt.train()
+aux_opt.train_skopt()

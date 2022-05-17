@@ -9,6 +9,7 @@ from PyAuxeticWrapper import *
 import GPyOpt as GP
 from helper_functions import *
 import os, sys, pickle, subprocess, json
+import skopt
 
 class AuxeticOptimization(AuxeticAnalysis):
     def __init__(self):
@@ -23,7 +24,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                     result_folder_name='analysis',
                     extrusion_depth=5,
                     optimizer='BayesOpt',
-                    bo_init=None
+                    load=False
                     ):
         
         self.params = {}
@@ -36,7 +37,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.params['folder']                         = result_folder_name
         
         self.result_folder_name                       = result_folder_name
-        self.bo_init                                  = bo_init
+        self.load                                     = load
         self.space                                    = []
         self.objective                                = []
         self.results                                  = {'nb_cells_x': [],
@@ -67,16 +68,25 @@ class AuxeticOptimization(AuxeticAnalysis):
                            # }
     
             self.feasible_region = [{'name': 'strut_angle', 'type': 'continuous', 'domain': [self.bounds['strut_angle']['lower'],
-                                                                              self.bounds['strut_angle']['upper']]},
-                     {'name': 'nb_cells_x', 'type': 'discrete', 'domain': np.arange(self.bounds['nb_cells_x']['lower'],
-                                                                                    self.bounds['nb_cells_x']['upper'])},
-                     {'name': 'nb_cells_y', 'type': 'discrete', 'domain': np.arange(self.bounds['nb_cells_y']['lower'],
-                                                                                    self.bounds['nb_cells_y']['upper'])}]
+                                                                                              self.bounds['strut_angle']['upper']]},
+                                     {'name': 'nb_cells_x', 'type': 'discrete', 'domain': np.arange(self.bounds['nb_cells_x']['lower'],
+                                                                                                    self.bounds['nb_cells_x']['upper'])},
+                                     {'name': 'nb_cells_y', 'type': 'discrete', 'domain': np.arange(self.bounds['nb_cells_y']['lower'],
+                                                                                                    self.bounds['nb_cells_y']['upper'])}]
                                                    
                                                    
             constraints = [{'name': 'constr_1', 'constraint': '-x[:,1] -.5 + abs(x[:,0]) - np.sqrt(1-x[:,0]**2)'},
                            {'name': 'constr_2', 'constraint': 'x[:,1] +.5 - abs(x[:,0]) - np.sqrt(1-x[:,0]**2)'}]
              
+        elif self.params['optimizer'] == 'skopt':
+            self.bounds                  = params['bounds']
+            self.acquisition_type        = params['acquisition_type']
+            self.acquisition_weight      = params['acquisition_weight']
+            self.max_iter                = params['max_iter']
+            self.max_time                = params['max_time']
+            self.eps                     = params['eps']
+            self.verbosity               = params['verbosity']
+            self.tolerance               = params['tolerance']
             
     def setIODirectory(self):
         
@@ -84,11 +94,18 @@ class AuxeticOptimization(AuxeticAnalysis):
             
         os.chdir(setPath)
             
-    def loss(self, query):
+    def loss(self, librairy, query=None, **kwargs):
         
-        self.space = {'strut_angle': query[0,0],
-                      'nb_cells_x': query[0,1],
-                      'nb_cells_y': query[0,2]}
+        if librairy == 'GPyOpt':
+            self.space = {'strut_angle': query[0,0],
+                          'nb_cells_x': query[0,1],
+                          'nb_cells_y': query[0,2]}
+        elif librairy == 'skopt':
+            self.space = {'strut_angle': int(kwargs['params']['strut_angle']),
+                          'nb_cells_x': int(kwargs['params']['nb_cells_x']),
+                          'nb_cells_y': int(kwargs['params']['nb_cells_y'])}
+            
+        print(self.space)
         
         with open('Params.pkl','w+') as file:
             json.dump({**self.space,**self.params},file)
@@ -111,9 +128,71 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         return self.objective
     
-    def train(self):
-        
+    def train_skopt(self):
         os.chdir(os.path.join(os.getcwd(),'Librairies'))
+        
+        SPACE = [skopt.space.Real(self.bounds['strut_angle']['lower'], 
+                                  self.bounds['strut_angle']['upper'], 
+                                  name='strut_angle', 
+                                  prior='uniform'),
+                 skopt.space.Integer(self.bounds['nb_cells_x']['lower'], 
+                                     self.bounds['nb_cells_x']['upper'], 
+                                     name='nb_cells_x', 
+                                     prior='uniform'),
+                 skopt.space.Integer(self.bounds['nb_cells_y']['lower'], 
+                                     self.bounds['nb_cells_y']['upper'], 
+                                     name='nb_cells_y', 
+                                     prior='uniform')]
+        
+        @skopt.utils.use_named_args(SPACE)
+        def objective(**params):
+            all_params = {**params}
+            return -1.0 * self.loss(librairy='skopt',params=all_params)
+        
+        def callback(res):
+            n = len(res.x_iters)
+            print('Iteration {}, current point {}, current objective {}'.format(n,
+                                                                                self.space,
+                                                                                self.objective))
+            self.results['nb_cells_x'].append(self.space['nb_cells_x'])
+            self.results['nb_cells_y'].append(self.space['nb_cells_y'])
+            self.results['strut_angle'].append(self.space['strut_angle'])
+            self.results['obj'].append(self.objective)
+            self.results['vert_thickness'].append(self.vert_strut_thickness)
+            self.results['diag_thickness'].append(self.diag_strut_thickness)
+            self.results['extrusion_depth'].append(self.extrusion_depth)
+            self.results['seed_size'].append(self.seed_size)
+            
+            with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.pkl'),'w+') as file:
+                skopt.callbacks.CheckpointSaver(file)
+            with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.json'),'w+') as file:
+                json.dump(self.results,file)
+                
+        if self.load:
+            loaded_space = skopt.load(self.load)
+            res_gp = skopt.gp_minimize(objective, 
+                                       SPACE, 
+                                       n_calls=50,
+                                       acq_func="EI",
+                                       n_random_starts=5,
+                                       callback=[callback],
+                                       x0=loaded_space.x_iters,
+                                       yo=loaded_space.func_vals)
+            
+        else:
+            res_gp = skopt.gp_minimize(objective, 
+                                       SPACE, 
+                                       acq_func="EI",
+                                       n_random_starts=5,
+                                       callback=[callback],
+                                       n_calls=50)
+        
+        
+        
+        
+    def train_GPyOpt(self):
+        
+        os.chdir(os.path.join(os.getcwd(),'Librairies'))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
         
         # BO object
         self.bo = GP.methods.BayesianOptimization(f=self.loss,
