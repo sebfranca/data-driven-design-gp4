@@ -29,7 +29,8 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         self.params = {}
         self.params['optimizer']                      = optimizer
-        self.params['objective_scaling']              = objective_scaling
+        self.params['objective_scaling_Poisson']      = objective_scaling_Poisson
+        self.params['objective_scaling_surface']      = objective_scaling_surface
         self.params['textile_dimensions']             = textile_dimensions
         self.params['load_value']                     = load_value
         self.params['material']                       = material
@@ -115,11 +116,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                          shell=True,
                          stderr=subprocess.PIPE)
         
-        # print('STDOUT : \n{}'.format(p.stdout))
-        # print('STDERR : \n{}'.format(p.stderr))
-        for (out,err) in zip(iter(p.stdout.decode()),iter(p.stderr.decode())):
-            print(out)
-            print(err)
+        print('STDOUT : \n{}'.format(p.stdout))
+        print('STDERR : \n{}'.format(p.stderr))
         
         with open('Output.pkl','rb') as file:
             output = json.load(file)
@@ -183,7 +181,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 res_gp = skopt.gp_minimize(objective, 
                                            SPACE, 
                                            n_calls=nb_iter_without_save,
-                                           acq_func="EI",
+                                           acq_func=self.acquisition_type,
                                            n_random_starts=5,
                                            callback=[callback],
                                            x0=loaded_space.x_iters,
@@ -196,7 +194,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         else:
             res_gp = skopt.gp_minimize(objective, 
                                        SPACE, 
-                                       acq_func="EI",
+                                       acq_func=self.acquisition_type,
                                        n_random_starts=5,
                                        callback=[callback],
                                        n_calls=nb_iter_without_save,
@@ -209,7 +207,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 res_gp = skopt.gp_minimize(objective, 
                                            SPACE, 
                                            n_calls=nb_iter_without_save,
-                                           acq_func="EI",
+                                           acq_func=self.acquisition_type,
                                            n_random_starts=5,
                                            callback=[callback],
                                            x0=loaded_space.x_iters,
@@ -225,7 +223,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         # BO object
         self.bo = GP.methods.BayesianOptimization(f=self.loss,
                                                   domain=self.feasible_region,
-                                                  acquisition_type='EI',
+                                                  acquisition_type=self.acquisition_type,
                                                   model_type='sparseGP')
         
         k = 1

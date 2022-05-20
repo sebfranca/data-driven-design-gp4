@@ -15,7 +15,7 @@ from helper_functions import *
 # pyauxetic_library_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib/abaqus_plugins/pyauxetic-main'
 pyauxetic_library_path = os.path.join(os.getcwd(),'pyauxetic-main')
 command_path = 'C:/SIMULIA/Abaqus/Commands'
-abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/cod/python2.7/lib'
+abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib'
 sys.path.append(pyauxetic_library_path)
 sys.path.append(command_path)
 sys.path.append(abaqus_path)
@@ -141,7 +141,7 @@ class AuxeticAnalysis:
             # Check seed size as a fct of the smallest elements
             self.seed_size = np.min([self.vert_strut_thickness,
                                      self.diag_strut_thickness,
-                                     self.extrusion_depth])/2.5
+                                     self.extrusion_depth])/2
             
             pattern_params = PatternParams(
               pattern_mode    = 'uniform',
@@ -295,8 +295,8 @@ if __name__ == '__main__':
     
     aux_anal.createAnalysis()
     
-    objective = (aux_anal.output['poisson_mean'] + 
-                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling'])
+    objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] + 
+                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
     
     output = {'objective': objective,
               'vert': aux_anal.vert_strut_thickness,
