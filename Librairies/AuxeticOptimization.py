@@ -42,11 +42,11 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.load                                     = load
         self.space                                    = []
         self.objective                                = []
+        self.failed                                   = False
         
         if self.load:
             with open(os.path.join(os.getcwd(),'Librairies/Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'rb') as file:
                 self.results = pickle.load(file)
-                
             
         else:
             self.results                                  = {'nb_cells_x': [],
@@ -57,7 +57,12 @@ class AuxeticOptimization(AuxeticAnalysis):
                                                              'diag_thickness': [],
                                                              'diag_strut_angle': [],
                                                              'extrusion_depth': [],
-                                                             'seed_size': []}
+                                                             'seed_size': [],
+                                                             'xi': params['xi'],
+                                                             'kappa': params['kappa'],
+                                                             'acq_weight': params['acquisition_weight'],
+                                                             'acq_type': params['acquisition_type'],
+                                                             'bounds': params['bounds']}
         self.base_iters = len(self.results['nb_cells_x'])
         
         if self.params['optimizer'] == 'BayesOpt':
@@ -150,6 +155,8 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.extrusion_depth = output['extrusion']
         
         if self.objective == 1e6:
+            
+            self.failed = True
             if len(self.results['obj']) == 0:
                 self.objective = 1e3
             else:
@@ -178,7 +185,6 @@ class AuxeticOptimization(AuxeticAnalysis):
             all_params = {**params}
             return 1.0 * self.loss(librairy='skopt',params=all_params)
         
-        is_reloaded = False
         def callback(res):
             n = len(res.x_iters)
             
@@ -186,8 +192,9 @@ class AuxeticOptimization(AuxeticAnalysis):
                 
                 print('\n')
                 print('#'*100)
-                if self.objective == 1e6:
+                if self.failed:
                     obj = 'ANALYSIS UNFEASIBLE'
+                    self.failed = False
                 else:
                     obj = self.objective
                 print('Iteration {}/{} results at current point {} : current objective {}'.format(n,
@@ -208,8 +215,6 @@ class AuxeticOptimization(AuxeticAnalysis):
                 self.results['extrusion_depth'].append(self.extrusion_depth)
                 self.results['seed_size'].append(self.seed_size)
                 
-                # with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.pkl'),'w+') as file:
-                #     skopt.callbacks.CheckpointSaver(file)
                 with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
                     pickle.dump(self.results,file)
                 
@@ -219,7 +224,6 @@ class AuxeticOptimization(AuxeticAnalysis):
         nb_saves = int(self.max_iter / nb_iter_without_save)
         if self.load:
             loaded_space = skopt.load(intermediate_save)
-            is_reloaded = True
             
             for k in range(nb_saves):
                 res_gp = skopt.gp_minimize(objective, 
@@ -238,7 +242,6 @@ class AuxeticOptimization(AuxeticAnalysis):
                 loaded_space = skopt.load(intermediate_save)
             
         else:
-            is_reloaded = False
             res_gp = skopt.gp_minimize(objective, 
                                        SPACE, 
                                        acq_func="EI",
