@@ -242,7 +242,7 @@ class AuxeticAnalysis:
                 os.makedirs(os.path.join(os.getcwd(),'../Tables'))
                 
             self.output = {}
-            self.output = {label: results[i,-1] for i, label in enumerate(output_table_labels)}
+            self.output = {label: results[-1,i] for i, label in enumerate(output_table_labels)}
             
             try:
                 with open(results_file,'w+') as file:
@@ -283,7 +283,7 @@ class AuxeticAnalysis:
         nb_x, nb_y = self.nb_cells_x, self.nb_cells_y
         
         size_x = self.textile_dimensions[0] / nb_x
-        size_y = self.textile_dimensions[0] / nb_y
+        size_y = self.textile_dimensions[1] / nb_y
         
         return size_x, size_y
 
@@ -331,6 +331,7 @@ if __name__ == '__main__':
     output = {'objective': objective,
               'vert': aux_anal.vert_strut_thickness,
               'diag': aux_anal.diag_strut_thickness,
+              'angle': aux_anal.diag_strut_angle,
               'extrusion': aux_anal.extrusion_depth,
               'seed': aux_anal.seed_size}
     

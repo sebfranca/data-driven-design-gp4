@@ -17,7 +17,8 @@ class AuxeticOptimization(AuxeticAnalysis):
         
     def optimParams(self,
                     params,
-                    objective_scaling,
+                    objective_scaling_Poisson,
+                    objective_scaling_surface,
                     textile_dimensions,
                     load_value,
                     material,
@@ -41,14 +42,23 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.load                                     = load
         self.space                                    = []
         self.objective                                = []
-        self.results                                  = {'nb_cells_x': [],
-                                                         'nb_cells_y': [],
-                                                         'AR': [],
-                                                         'obj': [],
-                                                         'vert_thickness': [],
-                                                         'diag_thickness': [],
-                                                         'extrusion_depth': [],
-                                                         'seed_size': []}
+        
+        if self.load:
+            with open(os.path.join(os.getcwd(),'Librairies/Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'rb') as file:
+                self.results = pickle.load(file)
+                
+            
+        else:
+            self.results                                  = {'nb_cells_x': [],
+                                                             'nb_cells_y': [],
+                                                             'AR': [],
+                                                             'obj': [],
+                                                             'vert_thickness': [],
+                                                             'diag_thickness': [],
+                                                             'diag_strut_angle': [],
+                                                             'extrusion_depth': [],
+                                                             'seed_size': []}
+        self.base_iters = len(self.results['nb_cells_x'])
         
         if self.params['optimizer'] == 'BayesOpt':
             self.bounds                  = params['bounds']
@@ -110,16 +120,21 @@ class AuxeticOptimization(AuxeticAnalysis):
                           'nb_cells_x': int(kwargs['params']['nb_cells_x']),
                           'nb_cells_y': int(kwargs['params']['nb_cells_y']),
                           'mode': self.mode}
-            
-        print(self.space)
+        print('\n')   
+        print('='*100)
+        print('Analysis started for datapoint {} at time {}'.format(self.space,time.strftime('%d/%m/%Y %H:%M:%S')))
+        print('='*100)
+        print('\n') 
         
         with open('Params.pkl','w+') as file:
             json.dump({**self.space,**self.params},file)
          
+        start = time.time()
         p=subprocess.run(r'C:/SIMULIA/abaqus/Commands/abaqus cae noGUI=PyAuxeticWrapper.py', 
                          stdout=subprocess.PIPE,
                          shell=True,
                          stderr=subprocess.PIPE)
+        self.duration = time.time() - start
         
         print('STDOUT : \n{}'.format(p.stdout))
         print('STDERR : \n{}'.format(p.stderr))
@@ -130,8 +145,15 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.objective = output['objective']
         self.vert_strut_thickness = output['vert']
         self.diag_strut_thickness = output['diag']
+        self.diag_strut_angle = output['angle']
         self.seed_size = output['seed']
         self.extrusion_depth = output['extrusion']
+        
+        if self.objective == 1e6:
+            if len(self.results['obj']) == 0:
+                self.objective = 1e3
+            else:
+                self.objective = 1.2*np.max(self.results['obj'])
         
         return self.objective
     
@@ -158,40 +180,41 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         is_reloaded = False
         def callback(res):
-            print(locals())
-            if not 'is_reloaded' in locals():
-                if self.load:
-                    is_reloaded = True
-                else:
-                    is_reloaded = False
             n = len(res.x_iters)
-            if not is_reloaded:
-                print('Iteration {}/{}, current point {}, current objective {}'.format(n,
-                                                                                       self.max_iter,
-                                                                                       self.space,
-                                                                                       self.objective))
+            
+            if type(self.space) == dict:
+                
+                print('\n')
+                print('#'*100)
+                if self.objective == 1e6:
+                    obj = 'ANALYSIS UNFEASIBLE'
+                else:
+                    obj = self.objective
+                print('Iteration {}/{} results at current point {} : current objective {}'.format(n,
+                                                                                                 self.base_iters+self.max_iter,
+                                                                                                 self.space,
+                                                                                                 obj))
+                print('Analysis duration {}'.format(self.duration))
+                print('#'*100)
+                print('\n')
+                
                 self.results['nb_cells_x'].append(self.space['nb_cells_x'])
                 self.results['nb_cells_y'].append(self.space['nb_cells_y'])
                 self.results['AR'].append(self.space['AR'])
                 self.results['obj'].append(self.objective)
                 self.results['vert_thickness'].append(self.vert_strut_thickness)
                 self.results['diag_thickness'].append(self.diag_strut_thickness)
+                self.results['diag_strut_angle'].append(self.diag_strut_angle)
                 self.results['extrusion_depth'].append(self.extrusion_depth)
                 self.results['seed_size'].append(self.seed_size)
                 
                 # with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.pkl'),'w+') as file:
                 #     skopt.callbacks.CheckpointSaver(file)
-                with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_results.json'),'w+') as file:
-                    json.dump(self.results,file)
-                    
-            if is_reloaded:
-                is_reloaded = False
-            
-            if not (n % nb_iter_without_save):
-                is_reloaded = True
+                with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
+                    pickle.dump(self.results,file)
                 
         intermediate_save = os.path.join(os.getcwd(),
-                                         'Abaqus_results/Tables',self.params['folder']+'_results.pkl')
+                                         'Abaqus_results/Tables',self.params['folder']+'_persistent.pkl')
         nb_iter_without_save = 5
         nb_saves = int(self.max_iter / nb_iter_without_save)
         if self.load:
