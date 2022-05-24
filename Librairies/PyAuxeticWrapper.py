@@ -15,7 +15,7 @@ from helper_functions import *
 # pyauxetic_library_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib/abaqus_plugins/pyauxetic-main'
 pyauxetic_library_path = os.path.join(os.getcwd(),'pyauxetic-main')
 command_path = 'C:/SIMULIA/Abaqus/Commands'
-abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/cod/python2.7/lib'
+abaqus_path = 'C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib'
 sys.path.append(pyauxetic_library_path)
 sys.path.append(command_path)
 sys.path.append(abaqus_path)
@@ -39,9 +39,9 @@ class AuxeticAnalysis:
                      uniform=True,
                      time_period=1.0,
                      init_inc_size=0.1,
-                     min_inc_size=0.01,
+                     min_inc_size=0.001,
                      max_inc_size=0.1,
-                     max_num_inc=1000,
+                     max_num_inc=100,
                      job_description='Sample job',
                      num_cpus=4,
                      max_memory_percent=80,
@@ -100,7 +100,7 @@ class AuxeticAnalysis:
             
             test_not_passed = True
             
-            while(test_not_passed):
+            for k in range(50):
             
                 horz_bounding_box    = self.horz_bounding_box / 2.0
                 vert_bounding_box    = self.vert_bounding_box / 2.0
@@ -111,22 +111,22 @@ class AuxeticAnalysis:
                 
                 diag_strut_angle_rad      = np.deg2rad(diag_strut_angle)
                 tail_strut_thickness_half = tail_strut_thickness / 2.0
-                diag_strut_length = (horz_bounding_box - tail_strut_thickness_half) / sin(diag_strut_angle_rad)
+                diag_strut_length = (horz_bounding_box - tail_strut_thickness_half) / np.sin(diag_strut_angle_rad)
                 vert_strut_length_half = ( vert_bounding_box
-                                      + (diag_strut_length         * cos(diag_strut_angle_rad) )
-                                      + (diag_strut_thickness      / sin(diag_strut_angle_rad) )
-                                      + (tail_strut_thickness_half / tan(diag_strut_angle_rad) ) ) / 2.0
+                                      + (diag_strut_length         * np.cos(diag_strut_angle_rad) )
+                                      + (diag_strut_thickness      / np.sin(diag_strut_angle_rad) )
+                                      + (tail_strut_thickness_half / np.tan(diag_strut_angle_rad) ) ) / 2.0
                 vert_strut_length = vert_strut_length_half * 2.0
                 tail_strut_length = ( vert_strut_length_half
-                                      - (diag_strut_thickness      / sin(diag_strut_angle_rad) )
-                                      - (tail_strut_thickness_half / tan(diag_strut_angle_rad) ) )
+                                      - (diag_strut_thickness      / np.sin(diag_strut_angle_rad) )
+                                      - (tail_strut_thickness_half / np.tan(diag_strut_angle_rad) ) )
                 
                 ## These dimensions only work if diag_line1 ends higher than tail_hline.
-                if tail_strut_length >= ( diag_strut_length * cos(diag_strut_angle_rad) ):
+                if tail_strut_length >= ( diag_strut_length * np.cos(diag_strut_angle_rad) ):
                     test_not_passed = False
-                    pass
-                
-                self.diag_strut_angle = np.random.uniform(self.diag_strut_angle,90,1)[0]
+                    break
+                    
+                self.diag_strut_angle = np.random.randint(self.diag_strut_angle,89,1)[0]
         
             self.unit_cell_params = Reentrant2DUcpBox(
                 id                   = 1  ,
@@ -198,33 +198,57 @@ class AuxeticAnalysis:
         structure_type = 'reentrant2d_planar_shell'
         structure_name = self.result_folder_name
         
-        auxeticObj = main_single(structure_type  , structure_name,
-                                 self.unit_cell_params, pattern_params,
-                                 material_params ,                
-                                 loading_params  , mesh_params   ,
-                                 job_params      , output_params ,
-                                 step_params     , run_analysis)
+        debug = {}
+        debug['nb_cells_x'] = self.nb_cells_x
+        debug['nb_cells_y'] = self.nb_cells_y
+        debug['AR'] = self.AR
+        debug['extrusion'] = self.extrusion_depth
+        debug['angle'] = self.diag_strut_angle
+        debug['vert_th'] = self.vert_strut_thickness
+        debug['diag_th'] = self.diag_strut_thickness
+        debug['vert_bb'] = self.vert_bounding_box
+        debug['horz_bb'] = self.horz_bounding_box
+        debug['seed_size'] = self.seed_size
+        debug['k'] = k
         
-        results = auxeticObj.output_table
-        
-        output_table_labels = ['Inc', 'Time',
-                               'U_ld', 'U_td_mean', 'U_td_midpoint',
-                               'strain_ld', 'strain_td_mean', 'strain_td_midpoint',
-                               'poisson_midpoint', 'poisson_mean','volume']
-        
-        results_file = os.path.join(os.getcwd(),'../Tables/results.csv')
-        
-        if not os.path.exists(os.path.join(os.getcwd(),'../Tables')):
-            os.makedirs(os.path.join(os.getcwd(),'../Tables'))
+        with open('Debug.pkl','w+') as file:
+            json.dump(debug,file)
             
-        self.output = {}
-        self.output = {label: results[i,-1] for i, label in enumerate(output_table_labels)}
+        if test_not_passed:
+            
+            self.output = {}
+            self.output['poisson_mean'] = 1e6
+            self.output['volume'] = 1e6
+            
+        else:
         
-        try:
-            with open(results_file,'w+') as file:
-                file.write(str(self.output))
-        except IOerror as e:
-            LOG(e)
+            auxeticObj = main_single(structure_type  , structure_name,
+                                     self.unit_cell_params, pattern_params,
+                                     material_params ,                
+                                     loading_params  , mesh_params   ,
+                                     job_params      , output_params ,
+                                     step_params     , run_analysis)
+            
+            results = auxeticObj.output_table
+            
+            output_table_labels = ['Inc', 'Time',
+                                   'U_ld', 'U_td_mean', 'U_td_midpoint',
+                                   'strain_ld', 'strain_td_mean', 'strain_td_midpoint',
+                                   'poisson_midpoint', 'poisson_mean','volume']
+            
+            results_file = os.path.join(os.getcwd(),'../Tables/results.csv')
+            
+            if not os.path.exists(os.path.join(os.getcwd(),'../Tables')):
+                os.makedirs(os.path.join(os.getcwd(),'../Tables'))
+                
+            self.output = {}
+            self.output = {label: results[i,-1] for i, label in enumerate(output_table_labels)}
+            
+            try:
+                with open(results_file,'w+') as file:
+                    file.write(str(self.output))
+            except IOerror as e:
+                LOG(e)
             
         self.resetDirectory()
         
@@ -293,10 +317,16 @@ if __name__ == '__main__':
                           params['material'],
                           result_folder_name=str(params['folder']))
     
-    aux_anal.createAnalysis()
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
     
-    objective = (aux_anal.output['poisson_mean'] + 
-                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling'])
+    if params['mode'] == 'debug':
+        objective = 1e6
+    else:
+        aux_anal.createAnalysis()
+    
+        objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] + 
+                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
     
     output = {'objective': objective,
               'vert': aux_anal.vert_strut_thickness,
