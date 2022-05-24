@@ -187,8 +187,9 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         def callback(res):
             n = len(res.x_iters)
+            if n == 1: n_last = 1
             
-            if type(self.space) == dict:
+            if n != n_last and type(self.space) == dict:
                 
                 print('\n')
                 print('#'*100)
@@ -217,6 +218,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                 
                 with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
                     pickle.dump(self.results,file)
+                    
+                n_last = n
                 
         intermediate_save = os.path.join(os.getcwd(),
                                          'Abaqus_results/Tables',self.params['folder']+'_persistent.pkl')
@@ -253,6 +256,7 @@ class AuxeticOptimization(AuxeticAnalysis):
             
             res_gp['specs']['args'].pop('callback')
             skopt.dump(res_gp,intermediate_save,store_objective=False)
+            
             
             for k in range(nb_saves-1):
                 loaded_space = skopt.utils.load(intermediate_save)
