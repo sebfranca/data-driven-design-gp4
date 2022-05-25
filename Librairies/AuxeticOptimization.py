@@ -355,37 +355,34 @@ class AuxeticOptimization(AuxeticAnalysis):
         os.chdir(os.path.join(os.getcwd(),'Librairies'))
         
         params_sensitivity = dict()
-        grid = []
+        n = 0
         
         for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
             params_sensitivity[name] = np.linspace(eval('self.min_' + name), eval('self.max_' + name), eval('self.num_' + name))
-            grid += [name]*len(params_sensitivity[name])
+            n += len(params_sensitivity[name])
         for name in ['nb_cells_x','nb_cells_y']:
             params_sensitivity[name] = range(eval('self.min_' + name), eval('self.max_' + name) + 1)
-            grid += [name]*len(params_sensitivity[name])
+            n += len(params_sensitivity[name])
         
         fixed_params = dict()
         for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
-            fixed_params[name] = params_sensitivity[name][0] + params_sensitivity[name][-1] / 2
+            fixed_params[name] = (params_sensitivity[name][0] + params_sensitivity[name][-1]) / 2
         for name in ['nb_cells_x','nb_cells_y']:
-            fixed_params[name] = int(params_sensitivity[name][0] + params_sensitivity[name][-1] // 2)
+            fixed_params[name] = int((params_sensitivity[name][0] + params_sensitivity[name][-1]) // 2)
             
-        n = len(grid)
+       
         
         #Params sensitivity contains all changing parameters with their values
         #Fixed params contains the constant values, taken as middle of the varying range
-        #grid = ['angle','angle',....,'diag_strut_thickness','diag_strut_thickness',.......]
-        # is used to know which parameter to vary at each iteration
         #n is the total size of the grid
         
         
         
         num_iter = 0
-        for opti_variable in grid:
+        for opti_variable in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness','nb_cells_x','nb_cells_y']:
             for value_idx, var_value in enumerate(params_sensitivity[opti_variable]):
-                
                 params = {
-                    name : params_sensitivity[name][value_idx] if name==opti_variable 
+                    name : var_value if name==opti_variable 
                            else fixed_params[name]
                            
                     for name in fixed_params.keys()
