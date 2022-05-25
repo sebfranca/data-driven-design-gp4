@@ -43,7 +43,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.space                                    = []
         self.objective                                = []
         self.failed                                   = False
-        self.is_ok                                    = True
+        self.prev_iter                                = 0
         
         if self.load:
             with open(os.path.join(os.getcwd(),'Librairies/Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'rb') as file:
@@ -188,7 +188,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         def callback(res):
             n = len(res.x_iters)
-            if self.is_ok and type(self.space) == dict:
+            if self.prev_iter != n and type(self.space) == dict:
                 
                 print('\n')
                 print('#'*100)
@@ -218,8 +218,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
                     pickle.dump(self.results,file)
                     
-            elif not self.is_ok:
-                self.is_ok = True
+            self.prev_iter = n
                 
         intermediate_save = os.path.join(os.getcwd(),
                                          'Abaqus_results/Tables',self.params['folder']+'_persistent.pkl')
@@ -243,7 +242,6 @@ class AuxeticOptimization(AuxeticAnalysis):
                 res_gp['specs']['args'].pop('callback')
                 skopt.dump(res_gp,intermediate_save,store_objective=False)
                 loaded_space = skopt.load(intermediate_save)
-                self.is_ok = False
             
         else:
             res_gp = skopt.gp_minimize(objective, 
@@ -274,7 +272,6 @@ class AuxeticOptimization(AuxeticAnalysis):
                 
                 res_gp['specs']['args'].pop('callback')
                 skopt.dump(res_gp,intermediate_save,store_objective=False)
-                self.is_ok = False
         
     def train_GPyOpt(self):
         
