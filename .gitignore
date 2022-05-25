@@ -127,3 +127,30 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+GridSearch.py
+Librairies/abaqus.rpy
+Librairies/abaqus.rpy.10
+Librairies/abaqus.rpy.11
+Librairies/abaqus.rpy.12
+Librairies/abaqus.rpy.13
+Librairies/Output.pkl
+Librairies/Params.pkl
+Librairies/Abaqus_results/Obj_poisson_only/Debug.pkl
+Librairies/Abaqus_results/Obj_poisson_only/log.txt
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.com
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.dat
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.inp
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.msg
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.odb
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.prt
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.sim
+Librairies/Abaqus_results/Obj_poisson_only/Obj_poisson_only.sta
+Librairies/Abaqus_results/Tables/Obj_poisson_only results.csv
+Librairies/Abaqus_results/Tables/Obj_poisson_only_values.pkl
+Librairies/Abaqus_results/Tables/results.csv
+Python_results/angle_sensitivity.txt
+Python_results/Save/angle_sensitivity.txt
+Python_results/Save/diag_t_sensitivity.txt
+Python_results/Save/nb_x_sensitivity.txt
+Python_results/Save/nb_y_sensitivity.txt
+Python_results/Save/vert_t_sensitivity.txt
