@@ -25,7 +25,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                     result_folder_name='analysis',
                     extrusion_depth=4,
                     optimizer='BayesOpt',
-                    load=False
+                    load=False,
+                    **kwargs
                     ):
         
         self.params = {}
@@ -43,26 +44,52 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.space                                    = []
         self.objective                                = []
         self.failed                                   = False
+        self.prev_iter                                = 0
+        
+        self.min_diag_strut_angle = kwargs.get("min_diag_strut_angle",None)
+        self.max_diag_strut_angle = kwargs.get("max_diag_strut_angle",None)
+        self.num_diag_strut_angle = kwargs.get("num_diag_strut_angle",None)
+        self.min_diag_strut_thickness    = kwargs.get("min_diag_strut_thickness", None)
+        self.max_diag_strut_thickness    = kwargs.get("max_diag_strut_thickness", None)
+        self.num_diag_strut_thickness    = kwargs.get("num_diag_strut_thickness", None)
+        self.min_vert_strut_thickness    = kwargs.get("min_vert_strut_thickness", None)
+        self.max_vert_strut_thickness    = kwargs.get("max_vert_strut_thickness", None)
+        self.num_vert_strut_thickness    = kwargs.get("num_vert_strut_thickness", None)
+        self.min_nb_cells_x     = kwargs.get("min_nb_cells_x", None)
+        self.max_nb_cells_x     = kwargs.get("max_nb_cells_x", None)
+        self.min_nb_cells_y     = kwargs.get("min_nb_cells_y", None)
+        self.max_nb_cells_y     = kwargs.get("max_nb_cells_y", None)
+        
         
         if self.load:
             with open(os.path.join(os.getcwd(),'Librairies/Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'rb') as file:
                 self.results = pickle.load(file)
             
         else:
-            self.results                                  = {'nb_cells_x': [],
-                                                             'nb_cells_y': [],
-                                                             'AR': [],
-                                                             'obj': [],
-                                                             'vert_thickness': [],
-                                                             'diag_thickness': [],
-                                                             'diag_strut_angle': [],
-                                                             'extrusion_depth': [],
-                                                             'seed_size': [],
-                                                             'xi': params['xi'],
-                                                             'kappa': params['kappa'],
-                                                             'acq_weight': params['acquisition_weight'],
-                                                             'acq_type': params['acquisition_type'],
-                                                             'bounds': params['bounds']}
+            if self.min_diag_strut_angle == None:
+                self.results                                  = {'nb_cells_x': [],
+                                                                 'nb_cells_y': [],
+                                                                 'AR': [],
+                                                                 'obj': [],
+                                                                 'vert_thickness': [],
+                                                                 'diag_thickness': [],
+                                                                 'diag_strut_angle': [],
+                                                                 'extrusion_depth': [],
+                                                                 'seed_size': [],
+                                                                 'xi': params['xi'],
+                                                                 'kappa': params['kappa'],
+                                                                 'acq_weight': params['acquisition_weight'],
+                                                                 'acq_type': params['acquisition_type'],
+                                                                 'bounds': params['bounds']}
+            else:
+                self.results                                 = {'nb_cells_x': [],
+                                                                 'nb_cells_y': [],
+                                                                 'obj': [],
+                                                                 'vert_thickness': [],
+                                                                 'diag_thickness': [],
+                                                                 'diag_strut_angle': [],
+                                                                 'extrusion_depth': [],
+                                                                 'seed_size': [],}
         self.base_iters = len(self.results['nb_cells_x'])
         
         if self.params['optimizer'] == 'BayesOpt':
@@ -107,7 +134,11 @@ class AuxeticOptimization(AuxeticAnalysis):
             self.kappa                   = params['kappa']
             self.xi                      = params['xi']
             self.mode                    = params['mode']
+        
+        elif self.params['optimizer'] == 'sensitivity':
+            self.verbosity               = params['verbosity']
             
+        
     def setIODirectory(self):
         
         setPath = os.path.join(os.getcwd(),'../../')
@@ -125,6 +156,13 @@ class AuxeticOptimization(AuxeticAnalysis):
                           'nb_cells_x': int(kwargs['params']['nb_cells_x']),
                           'nb_cells_y': int(kwargs['params']['nb_cells_y']),
                           'mode': self.mode}
+        elif librairy == 'sensitivity':
+            self.space = {'diag_strut_thickness' : float(kwargs['params']['diag_strut_thickness']),
+                          'vert_strut_thickness' : float(kwargs['params']['vert_strut_thickness']),
+                          'nb_cells_x': int(kwargs['params']['nb_cells_x']),
+                          'nb_cells_y': int(kwargs['params']['nb_cells_y']),
+                          'strut_angle': float(kwargs['params']['diag_strut_angle'])
+                          }
         print('\n')   
         print('='*100)
         print('Analysis started for datapoint {} at time {}'.format(self.space,time.strftime('%d/%m/%Y %H:%M:%S')))
@@ -187,9 +225,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         def callback(res):
             n = len(res.x_iters)
-            if n == 1: n_last = 1
-            
-            if n != n_last and type(self.space) == dict:
+            if self.prev_iter != n and type(self.space) == dict:
                 
                 print('\n')
                 print('#'*100)
@@ -219,7 +255,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
                     pickle.dump(self.results,file)
                     
-                n_last = n
+            self.prev_iter = n
                 
         intermediate_save = os.path.join(os.getcwd(),
                                          'Abaqus_results/Tables',self.params['folder']+'_persistent.pkl')
@@ -273,7 +309,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 
                 res_gp['specs']['args'].pop('callback')
                 skopt.dump(res_gp,intermediate_save,store_objective=False)
-        
+                
     def train_GPyOpt(self):
         
         os.chdir(os.path.join(os.getcwd(),'Librairies'))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
@@ -315,4 +351,48 @@ class AuxeticOptimization(AuxeticAnalysis):
             self.bo.x_opt, 
             self.bo.fx_opt))
         
+    def run_sensitivity(self):
+        os.chdir(os.path.join(os.getcwd(),'Librairies'))
+        
+        params_sensitivity = dict()
+        grid = []
+        
+        for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
+            params_sensitivity[name] = np.linspace(eval('self.min_' + name), eval('self.max_' + name), eval('self.num_' + name))
+            grid += [name]*len(params_sensitivity[name])
+        for name in ['nb_cells_x','nb_cells_y']:
+            params_sensitivity[name] = range(eval('self.min_' + name), eval('self.max_' + name) + 1)
+            grid += [name]*len(params_sensitivity[name])
+        
+        fixed_params = dict()
+        for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
+            fixed_params[name] = params_sensitivity[name][0] + params_sensitivity[name][-1] / 2
+        for name in ['nb_cells_x','nb_cells_y']:
+            fixed_params[name] = int(params_sensitivity[name][0] + params_sensitivity[name][-1] // 2)
+            
+        n = len(grid)
+        
+        #Params sensitivity contains all changing parameters with their values
+        #Fixed params contains the constant values, taken as middle of the varying range
+        #grid = ['angle','angle',....,'diag_strut_thickness','diag_strut_thickness',.......]
+        # is used to know which parameter to vary at each iteration
+        #n is the total size of the grid
+        
+        
+        
+        num_iter = 0
+        for opti_variable in grid:
+            for value_idx, var_value in enumerate(params_sensitivity[opti_variable]):
+                
+                params = {
+                    name : params_sensitivity[name][value_idx] if name==opti_variable 
+                           else fixed_params[name]
+                           
+                    for name in fixed_params.keys()
+                    }
+                
+                print(self.loss(librairy='sensitivity', params=params))
+                
+                num_iter += 1
+            
         

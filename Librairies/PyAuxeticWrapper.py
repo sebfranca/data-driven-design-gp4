@@ -83,9 +83,12 @@ class AuxeticAnalysis:
         self.setDirectory() # Set working directory
         
         if self.uniform: 
-            # self.vert_strut_thickness       = self.unit_cell_params_list['vert_strut_thickness']
-            # self.diag_strut_thickness       = self.unit_cell_params_list['diag_strut_thickness']
+            # if 'vert_strut_thickness' in self.unit_cell_params_list.keys():
+            #     self.vert_strut_thickness       = self.unit_cell_params_list['vert_strut_thickness']
+            #     self.diag_strut_thickness       = self.unit_cell_params_list['diag_strut_thickness']
+            # else:
             self.AR                         = self.unit_cell_params_list['AR']
+            
             # self.aspect_ratio               = self.unit_cell_params_list['aspect_ratio']
             self.extrusion_depth            = self.unit_cell_params_list['extrusion_depth']
             self.nb_cells_x                 = self.unit_cell_params_list['nb_cells_x']
@@ -95,6 +98,7 @@ class AuxeticAnalysis:
             
             self.vert_strut_thickness = self.horz_bounding_box / self.AR
             self.diag_strut_thickness = self.vert_strut_thickness
+            
             
             self.diag_strut_angle = 50
             
