@@ -29,7 +29,7 @@ bounds = {'nb_cells_x': {'lower': 5,
 params = {'bounds': bounds,
           'acquisition_type': 'EI',
           'acquisition_weight': .4, # Supposed to change explor/exploit ratio (check in skopt doc)
-          'max_iter': 100, # Number of bayesian opt. iterations
+          'max_iter': 10, # Number of bayesian opt. iterations
           'max_time': None,
           'eps': 1e-8, # Stopping tolerance, not important
           'verbosity': True,
@@ -50,7 +50,7 @@ aux_opt.optimParams(params=params,
                     material=material,
                     optimizer='skopt', 
                     load=False, # False : re-start and overwrite, True : load ancient optimization
-                    result_folder_name='Obj_poisson_only') # Name of the file, to be changed if a new
+                    result_folder_name='test3') # Name of the file, to be changed if a new
                                                            # optimization is requested, put old name
                                                            # if old optim. to be reloaded
 
