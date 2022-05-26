@@ -217,8 +217,8 @@ class AuxeticAnalysis:
         if test_not_passed:
             
             self.output = {}
-            self.output['poisson_mean'] = 1e6
-            self.output['volume'] = 1e6
+            self.output['poisson_mean'] = None
+            self.output['volume'] = None
             
         else:
         
@@ -324,9 +324,13 @@ if __name__ == '__main__':
         objective = 1e6
     else:
         aux_anal.createAnalysis()
-    
-        objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] + 
-                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
+        
+        if aux_anal.output['poisson_mean'] is None:
+            objective = None
+            
+        else:
+            objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] -
+                         aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
     
     output = {'objective': objective,
               'vert': aux_anal.vert_strut_thickness,

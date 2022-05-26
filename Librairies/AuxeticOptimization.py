@@ -128,7 +128,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                           'mode': self.mode}
         print('\n')   
         print('='*100)
-        print('Analysis started for datapoint {} at time {}'.format(self.space,time.strftime('%d/%m/%Y %H:%M:%S')))
+        print('Analysis started for datapoint {} at time {}'.format(self.space,
+                                                                    time.strftime('%d/%m/%Y %H:%M:%S')))
         print('='*100)
         print('\n') 
         
@@ -155,11 +156,12 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.seed_size = output['seed']
         self.extrusion_depth = output['extrusion']
         
-        if self.objective == 1e6:
+        if self.objective is None:
             
             self.failed = True
+            
             if len(self.results['obj']) == 0:
-                self.objective = 1e3
+                self.objective = 0
             else:
                 self.objective = 1.2*np.max(self.results['obj'])
         
