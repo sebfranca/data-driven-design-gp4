@@ -76,3 +76,11 @@ for an_idx, res in enumerate([res_angle, res_td, res_tv, res_x, res_y]):
     axs[1].set_ylabel("Volume [mm^3]")
     axs[1].set_xlabel(friendly_with_units[an_idx])
     axs[1].set_ylim(bottom=MIN_V-factor*abs(MIN_V), top=MAX_V + factor*abs(MAX_V))
+    
+plt.figure()
+plt.axis('off')
+plt.text(0.3,0.1, "Fixed angle: {}".format(res_td["diag_strut_angle"][0]), clip_on=False)
+plt.text(0.3,0.3, "Fixed td: {}".format(res_angle["diag_thickness"][0]), clip_on=False)
+plt.text(0.3,0.5, "Fixed tv: {}".format(res_angle["vert_thickness"][0]), clip_on=False)
+plt.text(0.3,0.7, "Fixed nb cells x: {}".format(res_angle["nb_cells_x"][0]), clip_on=False)
+plt.text(0.3,0.9, "Fixed nb cells y: {}".format(res_angle["nb_cells_y"][0]), clip_on=False)

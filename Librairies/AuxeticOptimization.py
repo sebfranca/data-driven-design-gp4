@@ -59,6 +59,8 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.max_nb_cells_x     = kwargs.get("max_nb_cells_x", None)
         self.min_nb_cells_y     = kwargs.get("min_nb_cells_y", None)
         self.max_nb_cells_y     = kwargs.get("max_nb_cells_y", None)
+        self.israndom           = kwargs.get("israndom", False)
+        self.n_samples        = kwargs.get("n_samples", 1)
         
         
         if self.load:
@@ -364,21 +366,27 @@ class AuxeticOptimization(AuxeticAnalysis):
     def run_sensitivity(self):
         os.chdir(os.path.join(os.getcwd(),'Librairies'))
         
-        params_sensitivity = dict()
-        n = 0
         
-        for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
-            params_sensitivity[name] = np.linspace(eval('self.min_' + name), eval('self.max_' + name), eval('self.num_' + name))
-            n += len(params_sensitivity[name])
-        for name in ['nb_cells_x','nb_cells_y']:
-            params_sensitivity[name] = range(eval('self.min_' + name), eval('self.max_' + name) + 1)
-            n += len(params_sensitivity[name])
-        
-        fixed_params = dict()
-        for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
-            fixed_params[name] = (params_sensitivity[name][0] + params_sensitivity[name][-1]) / 2
-        for name in ['nb_cells_x','nb_cells_y']:
-            fixed_params[name] = int((params_sensitivity[name][0] + params_sensitivity[name][-1]) // 2)
+        if self.israndom:
+            params_random = dict()
+            random_gridsize = 400
+            for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
+                params_random[name] = np.linspace(eval('self.min_' + name), eval('self.max_' + name), random_gridsize)
+            for name in ['nb_cells_x','nb_cells_y']:
+                params_random[name] = range(eval('self.min_' + name), eval('self.max_' + name) + 1)
+       
+        else:
+            params_sensitivity = dict()
+            for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
+                params_sensitivity[name] = np.linspace(eval('self.min_' + name), eval('self.max_' + name), eval('self.num_' + name))
+            for name in ['nb_cells_x','nb_cells_y']:
+                params_sensitivity[name] = range(eval('self.min_' + name), eval('self.max_' + name) + 1)
+            
+            fixed_params = dict()
+            for name in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness']:
+                fixed_params[name] = (params_sensitivity[name][0] + params_sensitivity[name][-1]) / 2
+            for name in ['nb_cells_x','nb_cells_y']:
+                fixed_params[name] = int((params_sensitivity[name][0] + params_sensitivity[name][-1]) // 2)
             
        
         
@@ -418,22 +426,35 @@ class AuxeticOptimization(AuxeticAnalysis):
              with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
                  pickle.dump(self.results,file)
          
-        num_iter = 0
-        for opti_variable in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness','nb_cells_x','nb_cells_y']:
-            n = 0
-            for value_idx, var_value in enumerate(params_sensitivity[opti_variable]):
-                params = {
-                    name : var_value if name==opti_variable 
-                                     else fixed_params[name]
-                           
-                    for name in fixed_params.keys()
-                    }
-                
-                volume, poisson = self.loss(librairy='sensitivity', params=params)
-                
-                callback(params, opti_variable, n, len(params_sensitivity[opti_variable]), volume, poisson)
-                
-                num_iter += 1
-                n += 1
+        
+        
+        if self.israndom:
+            for n in range(self.n_samples):
+                    params = {
+                        name : np.random.choice(params_random[name])
+                        for name in params_random.keys()
+                        }
+                    
+                    volume, poisson = self.loss(librairy='sensitivity', params=params)
+                    
+                    callback(params, "None (random search)", n, self.n_samples, volume, poisson)
+
+        else:
+            for opti_variable in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness','nb_cells_x','nb_cells_y']:
+                n = 0
+                for value_idx, var_value in enumerate(params_sensitivity[opti_variable]):
+                    params = {
+                        name : var_value if name==opti_variable 
+                                         else fixed_params[name]
+                               
+                        for name in fixed_params.keys()
+                        }
+                    
+                    volume, poisson = self.loss(librairy='sensitivity', params=params)
+                    
+                    callback(params, opti_variable, n, len(params_sensitivity[opti_variable]), volume, poisson)
+                    
+                    
+                    n += 1
             
         
