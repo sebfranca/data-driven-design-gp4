@@ -347,8 +347,8 @@ if __name__ == '__main__':
             objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] + 
                       aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
         else:
-            volume = aux_anal['volume']
-            poisson = aux_anal['poisson_mean']
+            volume = aux_anal.output['volume']
+            poisson = aux_anal.output['poisson_mean']
     
     if 'AR' in params.keys():
         output = {'objective': objective,

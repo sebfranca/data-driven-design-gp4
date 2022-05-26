@@ -66,12 +66,13 @@ if mode=='sensitivity':
     #                          'upper': 10},
     #           'AR': {'lower': 1,
     #                   'upper': 8}}
-    num_grid = 2
+    num_grid = 20
     
     
     
     
     params = { 'verbosity': True,
+              'mode':'real'
               }                    
     
     material = {'E': 3.3e3,

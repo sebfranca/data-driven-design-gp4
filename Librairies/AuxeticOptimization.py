@@ -84,7 +84,8 @@ class AuxeticOptimization(AuxeticAnalysis):
             else:
                 self.results                                 = {'nb_cells_x': [],
                                                                  'nb_cells_y': [],
-                                                                 'obj': [],
+                                                                 'volume': [],
+                                                                 'poisson': [],
                                                                  'vert_thickness': [],
                                                                  'diag_thickness': [],
                                                                  'diag_strut_angle': [],
@@ -137,6 +138,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         
         elif self.params['optimizer'] == 'sensitivity':
             self.verbosity               = params['verbosity']
+            self.mode                    = params['mode']
             
         
     def setIODirectory(self):
@@ -161,7 +163,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                           'vert_strut_thickness' : float(kwargs['params']['vert_strut_thickness']),
                           'nb_cells_x': int(kwargs['params']['nb_cells_x']),
                           'nb_cells_y': int(kwargs['params']['nb_cells_y']),
-                          'diag_strut_angle': float(kwargs['params']['diag_strut_angle'])
+                          'diag_strut_angle': float(kwargs['params']['diag_strut_angle']),
+                          'mode': self.mode
                           }
         print('\n')   
         print('='*100)
@@ -384,21 +387,53 @@ class AuxeticOptimization(AuxeticAnalysis):
         #n is the total size of the grid
         
         
-        
+        def callback(params, opti_variable, n, n_tot, volume, poisson):
+                 
+             print('\n')
+             print('#'*100)
+             if self.failed:
+                 obj = 'ANALYSIS UNFEASIBLE'
+                 self.failed = False
+             else:
+                 obj = self.objective
+                 
+             print('Iteration {}/{} results at current point {} for opti var {}, vol {}, poisson{}'.format(n+1,
+                                                                                                        n_tot,
+                                                                                                        params,
+                                                                                                        opti_variable,
+                                                                                                        volume,
+                                                                                                        poisson))
+             print('Analysis duration {}'.format(self.duration))
+             print('#'*100)
+             print('\n')
+             
+             self.results['nb_cells_x'].append(params['nb_cells_x'])
+             self.results['nb_cells_y'].append(params['nb_cells_y'])
+             self.results['volume'].append(volume)
+             self.results['poisson'].append(poisson)
+             self.results['vert_thickness'].append(params['vert_strut_thickness'])
+             self.results['diag_thickness'].append(params['diag_strut_thickness'])
+             self.results['diag_strut_angle'].append(params['diag_strut_angle'])
+             
+             with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
+                 pickle.dump(self.results,file)
+         
         num_iter = 0
         for opti_variable in ['diag_strut_angle','diag_strut_thickness','vert_strut_thickness','nb_cells_x','nb_cells_y']:
+            n = 0
             for value_idx, var_value in enumerate(params_sensitivity[opti_variable]):
                 params = {
                     name : var_value if name==opti_variable 
-                           else fixed_params[name]
+                                     else fixed_params[name]
                            
                     for name in fixed_params.keys()
                     }
                 
                 volume, poisson = self.loss(librairy='sensitivity', params=params)
                 
+                callback(params, opti_variable, n, len(params_sensitivity[opti_variable]), volume, poisson)
+                
                 num_iter += 1
-            
-            
+                n += 1
             
         
