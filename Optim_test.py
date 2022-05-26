@@ -66,7 +66,7 @@ if mode=='sensitivity':
     #                          'upper': 10},
     #           'AR': {'lower': 1,
     #                   'upper': 8}}
-    num_grid = 20
+    num_grid = 2
     
     
     

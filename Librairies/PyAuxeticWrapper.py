@@ -86,7 +86,9 @@ class AuxeticAnalysis:
             if 'vert_strut_thickness' in self.unit_cell_params_list.keys():
                 self.vert_strut_thickness       = self.unit_cell_params_list['vert_strut_thickness']
                 self.diag_strut_thickness       = self.unit_cell_params_list['diag_strut_thickness']
+                self.diag_strut_angle           = self.unit_cell_params_list['diag_strut_angle']
                 self.AR = -1
+                
             else:
                 self.AR                         = self.unit_cell_params_list['AR']
             
@@ -102,7 +104,7 @@ class AuxeticAnalysis:
                 self.diag_strut_thickness = self.vert_strut_thickness
             
             
-            self.diag_strut_angle = 50
+                self.diag_strut_angle = 50
             
             test_not_passed = True
             
@@ -131,8 +133,8 @@ class AuxeticAnalysis:
                 if tail_strut_length >= ( diag_strut_length * np.cos(diag_strut_angle_rad) ):
                     test_not_passed = False
                     break
-                    
-                self.diag_strut_angle = np.random.randint(self.diag_strut_angle,89,1)[0]
+                if self.AR !=-1:
+                    self.diag_strut_angle = np.random.randint(self.diag_strut_angle,89,1)[0]
         
             self.unit_cell_params = Reentrant2DUcpBox(
                 id                   = 1  ,
@@ -310,10 +312,20 @@ if __name__ == '__main__':
     with io.open('Params.pkl','r') as file:
         params = json.load(file)
     
-    unit_cell_params={'AR': params['AR'],
-                      'extrusion_depth': params['extrusion_depth'],
-                      'nb_cells_x': int(params['nb_cells_x']),
-                      'nb_cells_y': int(params['nb_cells_y'])}
+    if 'AR' in params.keys():
+    
+        unit_cell_params={'AR': params['AR'],
+                          'extrusion_depth': params['extrusion_depth'],
+                          'nb_cells_x': int(params['nb_cells_x']),
+                          'nb_cells_y': int(params['nb_cells_y'])}
+    
+    else:
+        unit_cell_params={'vert_strut_thickness': params['vert_strut_thickness'],
+                          'diag_strut_thickness': params['diag_strut_thickness'],
+                          'diag_strut_angle': params['diag_strut_angle'],
+                          'extrusion_depth': params['extrusion_depth'],
+                          'nb_cells_x': int(params['nb_cells_x']),
+                          'nb_cells_y': int(params['nb_cells_y'])}
     
     aux_anal = AuxeticAnalysis()
     
@@ -330,16 +342,29 @@ if __name__ == '__main__':
         objective = 1e6
     else:
         aux_anal.createAnalysis()
+        
+        if 'AR' in params.keys():
+            objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] + 
+                      aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
+        else:
+            volume = aux_anal['volume']
+            poisson = aux_anal['poisson_mean']
     
-        objective = (aux_anal.output['poisson_mean'] * params['objective_scaling_Poisson'] + 
-                  aux_anal.output['volume'] / aux_anal.extrusion_depth * params['objective_scaling_surface'])
-    
-    output = {'objective': objective,
-              'vert': aux_anal.vert_strut_thickness,
-              'diag': aux_anal.diag_strut_thickness,
-              'angle': aux_anal.diag_strut_angle,
-              'extrusion': aux_anal.extrusion_depth,
-              'seed': aux_anal.seed_size}
+    if 'AR' in params.keys():
+        output = {'objective': objective,
+                  'vert': aux_anal.vert_strut_thickness,
+                  'diag': aux_anal.diag_strut_thickness,
+                  'angle': aux_anal.diag_strut_angle,
+                  'extrusion': aux_anal.extrusion_depth,
+                  'seed': aux_anal.seed_size}
+    else:
+        output = {'volume': volume,
+                  'poisson': poisson,
+                  'vert': aux_anal.vert_strut_thickness,
+                  'diag': aux_anal.diag_strut_thickness,
+                  'angle': aux_anal.diag_strut_angle,
+                  'extrusion': aux_anal.extrusion_depth,
+                  'seed': aux_anal.seed_size}
     
     with open('Output.pkl','w+') as file:
         json.dump(output,file)

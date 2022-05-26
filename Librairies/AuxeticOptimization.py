@@ -161,7 +161,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                           'vert_strut_thickness' : float(kwargs['params']['vert_strut_thickness']),
                           'nb_cells_x': int(kwargs['params']['nb_cells_x']),
                           'nb_cells_y': int(kwargs['params']['nb_cells_y']),
-                          'strut_angle': float(kwargs['params']['diag_strut_angle'])
+                          'diag_strut_angle': float(kwargs['params']['diag_strut_angle'])
                           }
         print('\n')   
         print('='*100)
@@ -185,12 +185,19 @@ class AuxeticOptimization(AuxeticAnalysis):
         with open('Output.pkl','rb') as file:
             output = json.load(file)
             
-        self.objective = output['objective']
         self.vert_strut_thickness = output['vert']
         self.diag_strut_thickness = output['diag']
         self.diag_strut_angle = output['angle']
         self.seed_size = output['seed']
         self.extrusion_depth = output['extrusion']
+            
+        if librairy == 'sensitivity':
+            self.volume = output['volume']
+            self.poisson = output['poisson']
+            return self.volume, self.poisson
+        else:
+            self.objective = output['objective']
+        
         
         if self.objective == 1e6:
             
@@ -388,8 +395,10 @@ class AuxeticOptimization(AuxeticAnalysis):
                     for name in fixed_params.keys()
                     }
                 
-                print(self.loss(librairy='sensitivity', params=params))
+                volume, poisson = self.loss(librairy='sensitivity', params=params)
                 
                 num_iter += 1
+            
+            
             
         
