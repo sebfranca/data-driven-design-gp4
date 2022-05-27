@@ -63,7 +63,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                                                              'kappa': params['kappa'],
                                                              'acq_weight': params['acquisition_weight'],
                                                              'acq_type': params['acquisition_type'],
-                                                             'bounds': params['bounds']}
+                                                             'bounds': params['bounds'],
+                                                             'failed': []}
         self.base_iters = len(self.results['nb_cells_x'])
         
         if self.params['optimizer'] == 'BayesOpt':
@@ -163,7 +164,7 @@ class AuxeticOptimization(AuxeticAnalysis):
             if len(self.results['obj']) == 0:
                 self.objective = 0
             else:
-                self.objective = 1.2*np.max(self.results['obj'])
+                self.objective = 1.01*np.max(self.results['obj'])
         
         return self.objective
     
@@ -192,6 +193,8 @@ class AuxeticOptimization(AuxeticAnalysis):
             n = len(res.x_iters)
             if self.prev_iter != n and type(self.space) == dict:
                 
+                self.results['failed'].append(self.failed)
+                
                 print('\n')
                 print('#'*100)
                 if self.failed:
@@ -216,6 +219,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 self.results['diag_strut_angle'].append(self.diag_strut_angle)
                 self.results['extrusion_depth'].append(self.extrusion_depth)
                 self.results['seed_size'].append(self.seed_size)
+                
                 
                 with open(os.path.join(os.getcwd(),'Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'wb') as file:
                     pickle.dump(self.results,file)
