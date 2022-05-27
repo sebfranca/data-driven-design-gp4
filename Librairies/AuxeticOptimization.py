@@ -156,7 +156,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.seed_size = output['seed']
         self.extrusion_depth = output['extrusion']
         
-        if self.objective is None:
+        if (self.objective is None or 'COMPLETED' not in str(p.stdout)):
             
             self.failed = True
             
