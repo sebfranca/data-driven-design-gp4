@@ -1,0 +1,3 @@
+echo "Delete .rpy files"
+rm -f *.rpy.*
+rm -f *.rec
