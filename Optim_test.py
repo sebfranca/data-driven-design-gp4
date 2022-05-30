@@ -36,8 +36,8 @@ params = {'bounds': bounds,
           'xi': 5e-2,                   # Controls how much improvement we want over the previous value
           'mode': 'real',
           'remove_fails': True,
-          'n_jobs': 1,
-          'nb_iter_wo_save': 200}                    
+          'n_jobs': 12,
+          'nb_iter_wo_save': 20}                    
 
 material = {'E': 3.3e3,
             'density':1.14e-9,
@@ -45,13 +45,13 @@ material = {'E': 3.3e3,
 
 aux_opt.optimParams(params=params,
                     objective_scaling_Poisson=1, # to be changed according to the study
-                    objective_scaling_surface=1e-3, # to be changed according to the study
+                    objective_scaling_surface=0, # to be changed according to the study
                     textile_dimensions=(50,50),
                     load_value=10, # load in Newton
                     material=material,
                     optimizer='skopt', 
                     load=False, # False : re-start and overwrite, True : load ancient optimization
-                    result_folder_name='gp_hedge') # Name of the file, to be changed if a new
+                    result_folder_name='poisson_only_gphedge') # Name of the file, to be changed if a new
                                                            # optimization is requested, put old name
                                                            # if old optim. to be reloaded
 

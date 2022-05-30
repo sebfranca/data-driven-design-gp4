@@ -7,7 +7,7 @@ Created on Wed Apr 27 08:37:18 2022
 
 import numpy as np
 import sys
-import os
+import os, shutil
 import pickle, io, json
 from helper_functions import *
 
@@ -303,6 +303,13 @@ if __name__ == '__main__':
     
     with io.open('Params.pkl','r') as file:
         params = json.load(file)
+        
+    if os.path.exists(os.path.join('Abaqus_results',params['folder'],params['folder']+'.lck')):
+        os.remove(os.path.join('Abaqus_results',params['folder'],params['folder']+'.lck'))
+        
+    # if os.path.exists(os.path.join('Abaqus_results',params['folder'])):
+    #     shutil.rmtree(os.path.join('Abaqus_results',params['folder']))
+        # os.mkdir(os.path.join('Abaqus_results',params['folder']))
     
     unit_cell_params={'AR': params['AR'],
                       'extrusion_depth': params['extrusion_depth'],
@@ -343,3 +350,4 @@ if __name__ == '__main__':
     
     with open('Output.pkl','w+') as file:
         json.dump(output,file)
+        

@@ -9,7 +9,7 @@ from PyAuxeticWrapper import *
 import GPyOpt as GP
 from helper_functions import *
 import os, sys, pickle, subprocess, json
-import skopt, time
+import skopt, time, shutil
 
 class AuxeticOptimization(AuxeticAnalysis):
     def __init__(self):
@@ -44,6 +44,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.objective                                = []
         self.failed                                   = False
         self.prev_iter                                = 0
+        self.fails                                    = 0
         
         if self.load:
             with open(os.path.join(os.getcwd(),'Librairies/Abaqus_results/Tables',self.params['folder']+'_values.pkl'),'rb') as file:
@@ -150,6 +151,8 @@ class AuxeticOptimization(AuxeticAnalysis):
         with open('Output.pkl','rb') as file:
             output = json.load(file)
             
+        subprocess.run(["Librairies/rm_rpy_rec"], shell=True)
+            
         self.objective = output['objective']
         self.vert_strut_thickness = output['vert']
         self.diag_strut_thickness = output['diag']
@@ -162,6 +165,7 @@ class AuxeticOptimization(AuxeticAnalysis):
         if (self.objective is None or 'COMPLETED' not in str(p.stdout)):
             
             self.failed = True
+            self.fails += 1
             
             if len(self.results['obj']) == 0:
                 self.objective = 0
@@ -208,7 +212,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                                                                                                  self.base_iters+self.max_iter,
                                                                                                  self.space,
                                                                                                  obj))
-                print('Analysis duration {}'.format(self.duration))
+                print('Analysis duration {}'.format(self.duration), end='')
+                print(', Fails proportion {}/{}'.format(self.fails,n))
                 print('#'*100)
                 print('\n')
                 
