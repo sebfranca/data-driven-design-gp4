@@ -20,24 +20,24 @@ import os
 
 aux_opt = AuxeticOptimization()
 
-bounds = {'nb_cells_x': {'lower': 2,
+bounds = {'nb_cells_x': {'lower': 4,
                          'upper': 15},
           'nb_cells_y': {'lower': 2,
                          'upper': 10},
-          'AR': {'lower': 1,
+          'AR': {'lower': 2,
                   'upper': 10}}
 
 params = {'bounds': bounds,
-          'acquisition_type': 'EI',
-          'acquisition_weight': .4, # Supposed to change explor/exploit ratio (check in skopt doc)
-          'max_iter': 100, # Number of bayesian opt. iterations
-          'max_time': None,
+          'acquisition_type': 'gp_hedge',
+          'max_iter': 200, # Number of bayesian opt. iterations
           'eps': 1e-8, # Stopping tolerance, not important
           'verbosity': True,
-          'tolerance': 1e-8,
           'kappa': 1.96,                # The higher, the more exploration
-          'xi': 1e-2,                   # Controls how much improvement we want over the previous value
-          'mode': 'real'}                    
+          'xi': 5e-2,                   # Controls how much improvement we want over the previous value
+          'mode': 'real',
+          'remove_fails': True,
+          'n_jobs': 1,
+          'nb_iter_wo_save': 200}                    
 
 material = {'E': 3.3e3,
             'density':1.14e-9,
@@ -51,7 +51,7 @@ aux_opt.optimParams(params=params,
                     material=material,
                     optimizer='skopt', 
                     load=False, # False : re-start and overwrite, True : load ancient optimization
-                    result_folder_name='Weight_1_001') # Name of the file, to be changed if a new
+                    result_folder_name='gp_hedge') # Name of the file, to be changed if a new
                                                            # optimization is requested, put old name
                                                            # if old optim. to be reloaded
 

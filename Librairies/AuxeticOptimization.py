@@ -54,6 +54,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                                                              'nb_cells_y': [],
                                                              'AR': [],
                                                              'obj': [],
+                                                             'Poisson': [],
+                                                             'surface': [],
                                                              'vert_thickness': [],
                                                              'diag_thickness': [],
                                                              'diag_strut_angle': [],
@@ -61,7 +63,6 @@ class AuxeticOptimization(AuxeticAnalysis):
                                                              'seed_size': [],
                                                              'xi': params['xi'],
                                                              'kappa': params['kappa'],
-                                                             'acq_weight': params['acquisition_weight'],
                                                              'acq_type': params['acquisition_type'],
                                                              'bounds': params['bounds'],
                                                              'failed': []}
@@ -100,15 +101,14 @@ class AuxeticOptimization(AuxeticAnalysis):
         elif self.params['optimizer'] == 'skopt':
             self.bounds                  = params['bounds']
             self.acquisition_type        = params['acquisition_type']
-            self.acquisition_weight      = params['acquisition_weight']
             self.max_iter                = params['max_iter']
-            self.max_time                = params['max_time']
-            self.eps                     = params['eps']
             self.verbosity               = params['verbosity']
-            self.tolerance               = params['tolerance']
             self.kappa                   = params['kappa']
             self.xi                      = params['xi']
             self.mode                    = params['mode']
+            self.remove_fails            = params['remove_fails']
+            self.n_jobs                  = params['n_jobs']
+            self.nb_iter_wo_save         = params['nb_iter_wo_save']
             
     def setIODirectory(self):
         
@@ -156,6 +156,8 @@ class AuxeticOptimization(AuxeticAnalysis):
         self.diag_strut_angle = output['angle']
         self.seed_size = output['seed']
         self.extrusion_depth = output['extrusion']
+        self.poisson = output['Poisson']
+        self.surface = output['surface']
         
         if (self.objective is None or 'COMPLETED' not in str(p.stdout)):
             
@@ -214,6 +216,8 @@ class AuxeticOptimization(AuxeticAnalysis):
                 self.results['nb_cells_y'].append(self.space['nb_cells_y'])
                 self.results['AR'].append(self.space['AR'])
                 self.results['obj'].append(self.objective)
+                self.results['Poisson'].append(self.poisson)
+                self.results['surface'].append(self.surface)
                 self.results['vert_thickness'].append(self.vert_strut_thickness)
                 self.results['diag_thickness'].append(self.diag_strut_thickness)
                 self.results['diag_strut_angle'].append(self.diag_strut_angle)
@@ -228,7 +232,7 @@ class AuxeticOptimization(AuxeticAnalysis):
                 
         intermediate_save = os.path.join(os.getcwd(),
                                          'Abaqus_results/Tables',self.params['folder']+'_persistent.pkl')
-        nb_iter_without_save = 5
+        nb_iter_without_save = self.nb_iter_wo_save
         nb_saves = int(self.max_iter / nb_iter_without_save)
         if self.load:
             loaded_space = skopt.load(intermediate_save)
@@ -239,11 +243,13 @@ class AuxeticOptimization(AuxeticAnalysis):
                                            n_calls=nb_iter_without_save,
                                            acq_func="EI",
                                            n_random_starts=0,
+                                           n_initial_points=0,
                                            callback=[callback],
                                            x0=loaded_space.x_iters,
                                            y0=loaded_space.func_vals,
                                            kappa=self.kappa,
-                                           xi=self.xi)
+                                           xi=self.xi,
+                                           n_jobs=self.n_jobs)
                 
                 res_gp['specs']['args'].pop('callback')
                 skopt.dump(res_gp,intermediate_save,store_objective=False)
@@ -253,11 +259,12 @@ class AuxeticOptimization(AuxeticAnalysis):
             res_gp = skopt.gp_minimize(objective, 
                                        SPACE, 
                                        acq_func="EI",
-                                       n_random_starts=5,
+                                       n_initial_points=5,
                                        callback=[callback],
                                        n_calls=nb_iter_without_save,
                                        kappa=self.kappa,
-                                       xi=self.xi)
+                                       xi=self.xi,
+                                       n_jobs=self.n_jobs)
             
             res_gp['specs']['args'].pop('callback')
             skopt.dump(res_gp,intermediate_save,store_objective=False)
@@ -270,11 +277,13 @@ class AuxeticOptimization(AuxeticAnalysis):
                                            n_calls=nb_iter_without_save,
                                            acq_func="EI",
                                            n_random_starts=0,
+                                           n_initial_points=0,
                                            callback=[callback],
                                            x0=loaded_space.x_iters,
                                            y0=loaded_space.func_vals,
                                            kappa=self.kappa,
-                                           xi=self.xi)
+                                           xi=self.xi,
+                                           n_jobs=self.n_jobs)
                 
                 res_gp['specs']['args'].pop('callback')
                 skopt.dump(res_gp,intermediate_save,store_objective=False)

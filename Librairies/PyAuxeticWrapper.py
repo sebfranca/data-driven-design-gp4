@@ -337,7 +337,9 @@ if __name__ == '__main__':
               'diag': aux_anal.diag_strut_thickness,
               'angle': aux_anal.diag_strut_angle,
               'extrusion': aux_anal.extrusion_depth,
-              'seed': aux_anal.seed_size}
+              'seed': aux_anal.seed_size,
+              'Poisson': aux_anal.output['poisson_mean'],
+              'surface': aux_anal.output['volume'] / aux_anal.extrusion_depth}
     
     with open('Output.pkl','w+') as file:
         json.dump(output,file)
