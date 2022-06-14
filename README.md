@@ -13,4 +13,5 @@ Welcome to our repository for the *Data-driven design (ME-428 @ EPFL)* final pro
 In order to use our code, please perform the following steps (after having pulled the repo):
 
 * Execute `pip install -r requirements.txt`
-* 
+* Put the `pyauxetic-main` directory inside your Abaqus installation directory, i.e. `C:/SIMULIA/Abaqus/6.14-1/code/python2.7/lib`
+* Enjoy !
