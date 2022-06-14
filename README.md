@@ -1,4 +1,4 @@
-# Auxetic material structural optimization using Abaqus (Main branch)
+# Auxetic material structural optimization using Abaqus
 
 ### Authors : Julie CHOUVALIDZE, Cédric FONTAINE, Sébastien FRANCA
 
