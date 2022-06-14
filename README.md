@@ -7,3 +7,10 @@ Welcome to our repository for the *Data-driven design (ME-428 @ EPFL)* final pro
 * cedric : bayesian optimization and whole pipeline for the structural optimization
 * jujuu : some optimization examples
 * sensitivity : code for the sensitivity analysis
+
+## How-to
+
+In order to use our code, please perform the following steps (after having pulled the repo):
+
+* Execute `pip install -r requirements.txt`
+* 
